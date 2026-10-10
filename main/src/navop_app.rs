@@ -373,8 +373,8 @@ fn initial_content_layout() -> InitialContentLayout {
 #[cfg(target_os = "macos")]
 use gpui::px;
 
-use gpui_component::dock::ToggleZoom;
 use gpui_component::ActiveTheme;
+use gpui_component::dock::ToggleZoom;
 use one_core::llm::manager::GlobalProviderState;
 use one_core::llm::notifier::emit_provider_config_changed;
 use one_core::llm::storage::{ProviderRepository, refresh_navop_models};
@@ -1003,7 +1003,8 @@ pub fn init(cx: &mut App) -> anyhow::Result<()> {
     crate::ai_chat_acp::init(cx);
     one_ui::init_table_display_settings(
         cx,
-        one_ui::TableDisplaySettings::new(AppSettings::global(cx).table_row_height),
+        one_ui::TableDisplaySettings::new(AppSettings::global(cx).table_row_height)
+            .with_column_comment(AppSettings::global(cx).table_show_column_comment),
     );
     let table_keybindings = table_keybindings(cx);
     one_ui::init(cx, table_keybindings);
@@ -1103,7 +1104,11 @@ fn table_keybindings(cx: &App) -> one_ui::TableKeybindings {
         ),
     )
     .with_find(
-        shortcuts_for(cx, action_id::TABLE_FIND, &[table_shortcut("cmd-f", "ctrl-f")]),
+        shortcuts_for(
+            cx,
+            action_id::TABLE_FIND,
+            &[table_shortcut("cmd-f", "ctrl-f")],
+        ),
         shortcuts_for(
             cx,
             action_id::TABLE_FIND_NEXT,

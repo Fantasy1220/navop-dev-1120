@@ -471,6 +471,13 @@
 - **验证方式**：覆盖手动确认卡片包含“安全确认、二次审批、自动执行”说明，自动执行卡片不含误导提示，ACP 后续 Public MCP 请求进入 Dialog 队列并展示完整脱敏参数，以及 Auto High/Critical 直接执行。
 - **适用范围**：`crates/ai_chat_view/src/acp/*`、`agent_transcript.rs`、`agent_view.rs`、`crates/public_mcp/src/permissions.rs`、`main/src/public_mcp_approval*`。
 
+- **标题**：Public MCP 的线上工具名必须净化，内部工具 id 保持带点分层
+- **触发信号**：Grok 这类 OpenAI 兼容客户端已经连上 Public MCP，却一个工具都列不出来（工具数为 0）；或新增带点工具 id 后，同一个工具在 ACP 与 MCP 两个入口显示成不同的名字。
+- **根因 / 约束**：Grok 注册函数时只接受 `[A-Za-z0-9_-]`，而 Navop 内部工具 id 用 `.` 分层（`ssh.command.poll`），带点的名字会在客户端注册阶段被整批丢弃；同时 Claude 等客户端接受 `.`，线上名字不能只按一种客户端的偏好来定。ACP 侧早已由 `ToolName` / `ToolNameAllocator` 完成净化，两条路各写一套会让同一工具在两个入口名字不一致。
+- **正确做法**：内部 id 一律不改（避免污染审批、审计与大量引用）；把 `PublicMcpToolRegistry::client_tools()` / `client_tool()` / `resolve_client_tool_name()` 作为唯一对外汇合点，复用 `agent_runtime::tools::{ToolName, ToolNameAllocator}`，并保持「先按内部 id 排序」的分配顺序，冲突（`sample.echo` 与 `sample_echo`）才会可复现且与 ACP 同名；`tools/call` 同时接受净化名与内部 id。对外暴露工具时不要直接读 `tools()`。
+- **验证方式**：协议层用例断言 `tools/list` 返回的每个名字都落在 `[A-Za-z0-9_-]` 内、且用净化名能成功执行 `tools/call`；单元用例覆盖 `sample.echo` / `sample_echo` 的冲突消解、对照表排序与双向解析；带点的内部 id 调用保持可用。
+- **适用范围**：`crates/public_mcp/src/tools/registry.rs`、`crates/public_mcp/src/protocol.rs`、`crates/agent_runtime/src/tools/spec.rs`、`crates/public_mcp/src/tools/agent_runtime_adapter.rs`。
+
 - **标题**：macOS 自定义标题栏中的可拖元素必须由应用显式接管标题栏拖动
 - **触发信号**：透明标题栏或 tab 栏中，按钮、输入框或 tab 的拖动被解释为窗口移动；为了规避问题出现 `allow_tab_drag = !is_macos` 一类平台禁用逻辑。
 - **根因 / 约束**：GPUI 的 `stop_propagation()` 和 `prevent_default()` 只影响 GPUI 事件传播，不能阻止 AppKit 把透明标题栏视为系统 window-move region。把 `NSWindow.isMovable` 设为 false 虽能规避抢事件，但会禁用 macOS Window 菜单的平铺与窗口管理快捷键。
@@ -708,6 +715,13 @@
 - **正确做法**：热区宽度取「分隔线 + 两侧各 `edge_padding`」（`geometry::Resize::hit_area()`），用负边距跨到边界另一侧（`right_0() + mr(-pad)` / `left_0() + ml(-pad)` / `top_0() + mt(-pad)`），细线再用 `justify_center` / `items_center` 留在原位（实测 `right_0().mr(-4).w(9)` ⇒ 盒子 `[边界-5, 边界+4]`、线仍在 `[边界-1, 边界]`，视觉零变化）。相邻单元格紧贴的表头不能靠单个元素跨列：右侧单元格可能带 `overflow_hidden`，跨列的绝对定位会被裁掉，而且后画的兄弟节点先拿到鼠标 ⇒ 由左右两个单元格各渲染一半（各 4px、都留在自己单元格内），合计 8px 跨边界。`render_*_resize_handles` 要返回 `Vec<AnyElement>` 给调用方 `.children(...)`，不能套一层尺寸为零的 wrapper（`top_0`/`bottom_0` 按直接父节点解析，套一层热区高度会变 0）。
 - **验证方式**：`cargo test -p one-ui --lib resize_handle_tests`、`cargo test -p redis_view --lib value_table_columns_resize_tests`（在 `#[gpui::test]` 里用 `debug_bounds` 量热区和细线的真实 bounds：边界两侧各铺够、细线停在边界、从边界左右按下都能拖动同一列；含变异验证：负边距改成 0、抓取区退回单边 6px、去掉右列那一半，对应用例都转红）。回归面：`cargo test -p one-ui --lib`（117）、`cargo test -p redis_view --lib`（77）、`cargo clippy -p one-ui -p redis_view --all-targets`、`cargo check -p main --all-targets`。
 - **适用范围**：`crates/one_ui/src/resize_handle.rs`（面板分隔条：SQL 结果面板、数据库／Mongo／Redis 侧边栏、终端工具坞共用）、`crates/redis_view/src/value_table_columns.rs`、`crates/db_view/src/{database_table_columns,table_designer_tab}.rs`、`crates/db_view/src/table_data/cell_preview_host.rs`。**故意没改的两处**（不是漏改）：`crates/core/src/tab_container.rs` 的侧边栏手柄已经是 9px（`theme_geometry().resize.hit_area()`），它挂在带 `overflow_hidden` 的面板上，跨出去的那半会被裁掉，面板内侧 9px 已经够宽；`crates/terminal_view/src/view/command_bar/render.rs` 的命令栏手柄是 6px 通栏、不锚定某条边界、两侧对称，加高会吃掉终端内容和输入框的点击。要动这两处得先把手柄搬到不裁剪的父层，属于结构改动。
+
+- **标题**：标签页鼠标动作要复用 `close_tab` 入口；gpui-component 的 `TabBar` 无法在仓内加挂鼠标钩子
+- **触发信号**：给标签栏加中键关闭（或任何新的鼠标按键动作）时，考虑在渲染层再判一次 `closeable && !is_locked`；或想把同样的手势接到工作区文件编辑器、远程文件编辑器的二级页签上。
+- **根因 / 约束**：`TabContainer::close_tab` 已经负责 `closeable` 拒绝、`is_locked` 通知、`closing_tabs` 去重和 `try_close`（未保存确认），渲染层重复判断只会产生两套守卫漂移。实测中键 down+up 不会触发该标签自己的 `on_click`（判别场景：活动标签在前、中键点最后一个背景标签，活动标签仍是它），所以既不需要在 `on_click` 里排除中键，也不能顺手加一个「中键也切激活」的分支——那是不会执行的代码。二级页签侧：`gpui_component::tab::TabBar::child(impl Into<Tab>)` 只接受 `Tab`，不能塞进带 `on_mouse_down` 的 `div` 包装层，`Tab` 自身也没有中键/关闭回调，所以 `workspace_explorer/src/editor/render.rs` 与 `remote_file_editor/src/editor_window.rs` 的页签无法在本仓加中键，只能改 gpui-kit fork。
+- **正确做法**：手势直接调 `close_tab(idx)`；固定（pinned）标签没有 × 且 `remove_pinned_tab_by_id` 会绕过 `try_close`，不要把它当中键目标。测试锚点用 `.id(...)` 后接 `.debug_selector(move || format!("tab-container.tab-{idx}"))`（`debug_bounds` 收 `&'static str`，测试里写 `"tab-container.tab-1"` 字面量）。判别「不抢激活」的场景必须是**活动标签在前、中键点最后一个背景标签**——点中间标签时 `active_index` 钳位会恰好落回原活动标签，断言空跑。
+- **验证方式**：`cargo test -p one-core --lib middle_click`（`middle_click_closes_a_tab_without_hitting_the_close_button` 覆盖只关光标下的标签且不抢激活；`middle_click_respects_uncloseable_tabs_and_leaves_left_click_alone` 覆盖不可关闭标签、固定标签与左键仍只切换）；变异验证：把 `close_tab(idx)` 改成 `close_tab(idx + 99)` 后第一条用例必须转红。回归面：`cargo test -p one-core --lib`、`cargo clippy -p one-core --all-targets`、`cargo check -p main --all-targets`。
+- **适用范围**：`crates/core/src/tab_container.rs` 的标签栏手势，以及任何想给 gpui-component `TabBar` 页签加鼠标动作的站点。
 
 ### 执行原则
 
