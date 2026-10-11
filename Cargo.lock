@@ -1947,6 +1947,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "collections"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "gpui-fast-util",
+ "indexmap 2.14.2",
+ "rustc-hash 2.1.3",
+]
+
+[[package]]
 name = "color_quant"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3256,6 +3266,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7cd812cc2bc1d69d4764bd80df88b4317eaef9e773c75226407d9bc0876b211c"
 dependencies = [
  "serde_core",
+]
+
+[[package]]
+name = "derive-refineable"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
 ]
 
 [[package]]
@@ -5137,8 +5157,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "accesskit",
  "anyhow",
@@ -5147,6 +5167,7 @@ dependencies = [
  "backtrace",
  "bitflags 2.13.2",
  "chrono",
+ "collections",
  "core-video",
  "ctor",
  "derive_more 2.1.1",
@@ -5156,15 +5177,11 @@ dependencies = [
  "futures-concurrency",
  "getrandom 0.3.4",
  "gpui-fast-macros",
- "gpui-pre-collections",
- "gpui-pre-http-client",
- "gpui-pre-refineable",
- "gpui-pre-scheduler",
- "gpui-pre-shared-string",
- "gpui-pre-sum-tree",
- "gpui-pre-util",
+ "gpui-fast-shared-string",
+ "gpui-fast-util",
  "hdrhistogram",
  "heapless",
+ "http-client",
  "image",
  "inventory",
  "itertools 0.14.0",
@@ -5181,8 +5198,10 @@ dependencies = [
  "proptest",
  "rand 0.9.5",
  "raw-window-handle",
+ "refineable",
  "regex",
  "resvg",
+ "scheduler",
  "schemars 1.2.2",
  "seahash",
  "serde",
@@ -5191,7 +5210,8 @@ dependencies = [
  "smallvec",
  "spin 0.10.1",
  "strum 0.28.0",
- "taffy 0.14.0",
+ "sum-tree",
+ "taffy",
  "thiserror 2.0.21",
  "ttf-parser",
  "url",
@@ -5200,18 +5220,19 @@ dependencies = [
  "waker-fn",
  "web-time",
  "windows 0.62.2",
- "zed-scap 0.0.8-zed (registry+https://github.com/rust-lang/crates.io-index)",
+ "zed-scap",
 ]
 
 [[package]]
 name = "gpui-fast-apple"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "anyhow",
  "async-task",
  "block2 0.6.2",
  "cbindgen",
+ "collections",
  "core-foundation 0.10.1",
  "core-graphics 0.24.0",
  "core-video",
@@ -5220,8 +5241,7 @@ dependencies = [
  "etagere",
  "foreign-types",
  "gpui-fast",
- "gpui-pre-collections",
- "gpui-pre-util",
+ "gpui-fast-util",
  "image",
  "libc",
  "log",
@@ -5235,8 +5255,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-linux"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -5246,13 +5266,13 @@ dependencies = [
  "bytemuck",
  "calloop",
  "calloop-wayland-source",
+ "collections",
  "filedescriptor",
  "futures",
  "gpui-fast",
+ "gpui-fast-util",
  "gpui-fast-wgpu",
- "gpui-pre-collections",
- "gpui-pre-http-client",
- "gpui-pre-util",
+ "http-client",
  "libc",
  "log",
  "notify-rust",
@@ -5273,20 +5293,21 @@ dependencies = [
  "wayland-protocols-wlr",
  "x11rb",
  "xkbcommon",
- "zed-scap 0.0.8-zed (registry+https://github.com/rust-lang/crates.io-index)",
- "zed-xim 0.4.0-zed (registry+https://github.com/rust-lang/crates.io-index)",
+ "zed-scap",
+ "zed-xim",
 ]
 
 [[package]]
 name = "gpui-fast-macos"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "accesskit",
  "accesskit_macos",
  "anyhow",
  "block2 0.6.2",
  "cocoa 0.26.0",
+ "collections",
  "core-foundation 0.10.1",
  "core-foundation-sys",
  "core-graphics 0.24.0",
@@ -5298,9 +5319,7 @@ dependencies = [
  "futures",
  "gpui-fast",
  "gpui-fast-apple",
- "gpui-pre-collections",
- "gpui-pre-scheduler",
- "gpui-pre-util",
+ "gpui-fast-util",
  "image",
  "itertools 0.14.0",
  "log",
@@ -5312,6 +5331,7 @@ dependencies = [
  "parking_lot",
  "pathfinder_geometry",
  "raw-window-handle",
+ "scheduler",
  "semver",
  "smallvec",
  "strum 0.28.0",
@@ -5321,8 +5341,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-macros"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
@@ -5332,8 +5352,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-platform"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -5345,21 +5365,41 @@ dependencies = [
 ]
 
 [[package]]
+name = "gpui-fast-shared-string"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "schemars 1.2.2",
+ "serde",
+ "smol_str",
+]
+
+[[package]]
+name = "gpui-fast-util"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "anyhow",
+ "log",
+ "which",
+]
+
+[[package]]
 name = "gpui-fast-web"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
  "futures",
  "gpui-fast",
  "gpui-fast-wgpu",
- "gpui-pre-http-client",
- "gpui-pre-scheduler",
+ "http-client",
  "js-sys",
  "log",
  "parking_lot",
  "raw-window-handle",
+ "scheduler",
  "smallvec",
  "unicode-properties",
  "unicode-script",
@@ -5367,23 +5407,23 @@ dependencies = [
  "uuid",
  "wasm-bindgen",
  "wasm-bindgen-futures",
- "wasm_thread 0.3.3 (registry+https://github.com/rust-lang/crates.io-index)",
+ "wasm_thread",
  "web-sys",
  "web-time",
 ]
 
 [[package]]
 name = "gpui-fast-wgpu"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "anyhow",
  "bytemuck",
+ "collections",
  "cosmic-text",
  "etagere",
  "gpui-fast",
- "gpui-pre-collections",
- "gpui-pre-util",
+ "gpui-fast-util",
  "itertools 0.14.0",
  "log",
  "parking_lot",
@@ -5400,25 +5440,25 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-windows"
-version = "0.1.7"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
  "accesskit",
  "accesskit_windows",
  "anyhow",
+ "collections",
  "dunce",
  "etagere",
  "futures",
  "gpui-fast",
- "gpui-pre-collections",
- "gpui-pre-scheduler",
- "gpui-pre-util",
+ "gpui-fast-util",
  "image",
  "itertools 0.14.0",
  "log",
  "parking_lot",
  "rand 0.9.5",
  "raw-window-handle",
+ "scheduler",
  "smallvec",
  "uuid",
  "windows 0.62.2",
@@ -5480,263 +5520,25 @@ dependencies = [
 [[package]]
 name = "gpui-pre"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
- "accesskit",
- "anyhow",
- "async-channel",
- "async-task",
- "backtrace",
- "bitflags 2.13.2",
- "chrono",
- "core-video",
- "ctor",
- "derive_more 2.1.1",
- "embed-resource",
- "etagere",
- "futures",
- "getrandom 0.3.4",
- "gpui-pre-collections",
- "gpui-pre-http-client",
- "gpui-pre-macros",
- "gpui-pre-refineable",
- "gpui-pre-scheduler",
- "gpui-pre-shared-string",
- "gpui-pre-sum-tree",
- "gpui-pre-util",
- "hdrhistogram",
- "heapless",
- "image",
- "inventory",
- "itertools 0.14.0",
- "libc",
- "log",
- "lyon",
- "num_cpus",
- "parking",
- "parking_lot",
- "pin-project",
- "pollster 0.4.0",
- "profiling",
- "rand 0.9.5",
- "raw-window-handle",
- "regex",
- "resvg",
- "schemars 1.2.2",
- "seahash",
- "serde",
- "serde_json",
- "slotmap",
- "smallvec",
- "spin 0.10.1",
- "strum 0.28.0",
- "taffy 0.13.0",
- "thiserror 2.0.21",
- "ttf-parser",
- "url",
- "usvg",
- "uuid",
- "waker-fn",
- "windows 0.62.2",
- "zed-scap 0.0.8-zed (git+https://github.com/zed-industries/scap?rev=4afea48c3b002197176fb19cd0f9b180dd36eaac)",
-]
-
-[[package]]
-name = "gpui-pre-apple"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "anyhow",
- "async-task",
- "block2 0.6.2",
- "cbindgen",
- "core-foundation 0.10.1",
- "core-graphics 0.24.0",
- "core-video",
- "derive_more 2.1.1",
- "dispatch2",
- "etagere",
- "foreign-types",
- "gpui-pre",
- "gpui-pre-util",
- "image",
- "libc",
- "log",
- "mach2 0.6.0",
- "metal",
- "objc2 0.6.5",
- "objc2-foundation 0.3.2",
- "objc2-quartz-core 0.3.2",
- "parking_lot",
-]
-
-[[package]]
-name = "gpui-pre-collections"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "gpui-pre-util",
- "indexmap 2.14.2",
- "rustc-hash 2.1.3",
-]
-
-[[package]]
-name = "gpui-pre-derive-refineable"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.119",
-]
-
-[[package]]
-name = "gpui-pre-http-client"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "anyhow",
- "bytes",
- "futures",
- "http",
- "http-body",
- "log",
- "parking_lot",
- "serde",
- "serde_json",
- "serde_urlencoded",
- "url",
-]
-
-[[package]]
-name = "gpui-pre-http-client-tls"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "log",
- "rustls 0.23.45",
- "rustls-platform-verifier",
- "webpki-roots 1.0.9",
-]
-
-[[package]]
-name = "gpui-pre-linux"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "accesskit",
- "accesskit_unix",
- "anyhow",
- "as-raw-xcb-connection",
- "ashpd",
- "bytemuck",
- "calloop",
- "calloop-wayland-source",
- "filedescriptor",
- "futures",
- "gpui-pre",
- "gpui-pre-collections",
- "gpui-pre-http-client",
- "gpui-pre-util",
- "gpui-pre-wgpu",
- "libc",
- "log",
- "notify-rust",
- "oo7",
- "open",
- "parking_lot",
- "raw-window-handle",
- "smallvec",
- "smol",
- "strum 0.28.0",
- "url",
- "uuid",
- "wayland-backend",
- "wayland-client",
- "wayland-cursor",
- "wayland-protocols",
- "wayland-protocols-plasma",
- "wayland-protocols-wlr",
- "x11rb",
- "xkbcommon",
- "zed-scap 0.0.8-zed (git+https://github.com/zed-industries/scap?rev=4afea48c3b002197176fb19cd0f9b180dd36eaac)",
- "zed-xim 0.4.0-zed (git+https://github.com/zed-industries/xim-rs.git?rev=16f35a2c881b815a2b6cdfd6687988e84f8447d8)",
-]
-
-[[package]]
-name = "gpui-pre-macos"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "accesskit",
- "accesskit_macos",
- "anyhow",
- "block2 0.6.2",
- "cocoa 0.26.0",
- "core-foundation 0.10.1",
- "core-foundation-sys",
- "core-graphics 0.24.0",
- "core-text",
- "core-video",
- "ctor",
- "dispatch2",
- "foreign-types",
- "futures",
- "gpui-pre",
- "gpui-pre-apple",
- "gpui-pre-collections",
- "gpui-pre-scheduler",
- "gpui-pre-util",
- "image",
- "itertools 0.14.0",
- "log",
- "objc",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "objc2-user-notifications",
- "parking_lot",
- "pathfinder_geometry",
- "raw-window-handle",
- "semver",
- "smallvec",
- "strum 0.28.0",
- "uuid",
- "zed-font-kit 0.14.1-zed (git+https://github.com/zed-industries/font-kit?rev=94b0f28166665e8fd2f53ff6d268a14955c82269)",
+ "gpui-fast",
 ]
 
 [[package]]
 name = "gpui-pre-macros"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
- "heck 0.5.0",
- "proc-macro-crate 3.5.0",
- "proc-macro2",
- "quote",
- "syn 2.0.119",
+ "gpui-fast-macros",
 ]
 
 [[package]]
 name = "gpui-pre-platform"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
- "anyhow",
- "console_error_panic_hook",
- "gpui-pre",
- "gpui-pre-linux",
- "gpui-pre-macos",
- "gpui-pre-web",
- "gpui-pre-windows",
-]
-
-[[package]]
-name = "gpui-pre-refineable"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "gpui-pre-derive-refineable",
+ "gpui-fast-platform",
 ]
 
 [[package]]
@@ -5793,163 +5595,34 @@ dependencies = [
 [[package]]
 name = "gpui-pre-reqwest-client"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
- "anyhow",
- "bytes",
- "futures",
- "gpui-pre-http-client",
- "gpui-pre-http-client-tls",
- "gpui-pre-reqwest",
- "gpui-pre-util",
- "log",
- "regex",
- "tokio",
-]
-
-[[package]]
-name = "gpui-pre-scheduler"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "async-task",
- "backtrace",
- "chrono",
- "flume 0.12.0",
- "futures",
- "parking_lot",
- "rand 0.9.5",
- "wasm_thread 0.3.3 (git+https://github.com/zed-industries/wasm_thread?rev=0cf96c7708dfb97ccf3da50347e25edcf75d6937)",
- "web-time",
-]
-
-[[package]]
-name = "gpui-pre-shared-string"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "schemars 1.2.2",
- "serde",
- "smol_str",
+ "reqwest-client",
 ]
 
 [[package]]
 name = "gpui-pre-sum-tree"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
- "gpui-pre-ztracing",
- "heapless",
- "rayon",
- "tracing",
+ "sum-tree",
 ]
 
 [[package]]
 name = "gpui-pre-util"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
- "anyhow",
- "log",
- "which",
+ "gpui-fast-util",
 ]
 
 [[package]]
 name = "gpui-pre-web"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 dependencies = [
- "anyhow",
- "console_error_panic_hook",
- "futures",
- "gpui-pre",
- "gpui-pre-http-client",
- "gpui-pre-scheduler",
- "gpui-pre-wgpu",
- "js-sys",
- "log",
- "parking_lot",
- "raw-window-handle",
- "smallvec",
- "unicode-properties",
- "unicode-script",
- "unicode-segmentation",
- "uuid",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm_thread 0.3.3 (git+https://github.com/zed-industries/wasm_thread?rev=0cf96c7708dfb97ccf3da50347e25edcf75d6937)",
- "web-sys",
- "web-time",
+ "gpui-fast-web",
 ]
-
-[[package]]
-name = "gpui-pre-wgpu"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "anyhow",
- "bytemuck",
- "cosmic-text",
- "etagere",
- "gpui-pre",
- "gpui-pre-collections",
- "gpui-pre-util",
- "itertools 0.14.0",
- "log",
- "parking_lot",
- "profiling",
- "raw-window-handle",
- "smallvec",
- "swash",
- "unicode-bidi",
- "unicode-segmentation",
- "web-sys",
- "wgpu",
- "zed-font-kit 0.14.1-zed (git+https://github.com/zed-industries/font-kit?rev=94b0f28166665e8fd2f53ff6d268a14955c82269)",
-]
-
-[[package]]
-name = "gpui-pre-windows"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "accesskit",
- "accesskit_windows",
- "anyhow",
- "dunce",
- "etagere",
- "futures",
- "gpui-pre",
- "gpui-pre-collections",
- "gpui-pre-scheduler",
- "gpui-pre-util",
- "image",
- "itertools 0.14.0",
- "log",
- "parking_lot",
- "rand 0.9.5",
- "raw-window-handle",
- "smallvec",
- "uuid",
- "windows 0.62.2",
- "windows-core 0.62.2",
- "windows-numerics 0.3.1",
- "windows-registry 0.6.1",
-]
-
-[[package]]
-name = "gpui-pre-ztracing"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
-dependencies = [
- "gpui-pre-ztracing-macro",
- "tracing",
-]
-
-[[package]]
-name = "gpui-pre-ztracing-macro"
-version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
 
 [[package]]
 name = "gpui-rdp-smoke"
@@ -6469,6 +6142,35 @@ dependencies = [
  "http",
  "http-body",
  "pin-project-lite",
+]
+
+[[package]]
+name = "http-client"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "futures",
+ "http",
+ "http-body",
+ "log",
+ "parking_lot",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "url",
+]
+
+[[package]]
+name = "http-client-tls"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "log",
+ "rustls 0.23.45",
+ "rustls-platform-verifier",
+ "webpki-roots 1.0.9",
 ]
 
 [[package]]
@@ -7713,7 +7415,7 @@ dependencies = [
  "thiserror 2.0.21",
  "tokio",
  "wiremock",
- "zed-reqwest",
+ "zed-reqwest 0.12.15-zed (git+https://github.com/zed-industries/reqwest.git?rev=c15662463bda39148ba154100dd44d3fba5873a4)",
 ]
 
 [[package]]
@@ -11769,6 +11471,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "refineable"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "derive-refineable",
+]
+
+[[package]]
 name = "regalloc2"
 version = "0.11.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11936,6 +11646,23 @@ name = "renderdoc-sys"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "19b30a45b0cd0bcca8037f3d0dc3421eaf95327a17cad11964fb8179b4fc4832"
+
+[[package]]
+name = "reqwest-client"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "anyhow",
+ "bytes",
+ "futures",
+ "gpui-fast-util",
+ "http-client",
+ "http-client-tls",
+ "log",
+ "regex",
+ "tokio",
+ "zed-reqwest 0.12.15-zed (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "resolv-conf"
@@ -12647,6 +12374,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "91c1b7e4904c873ef0710c1f407dde2e6287de2bebc1bbbf7d430bb7cbffd939"
 dependencies = [
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "scheduler"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "async-task",
+ "backtrace",
+ "chrono",
+ "flume 0.12.0",
+ "futures",
+ "parking_lot",
+ "rand 0.9.5",
+ "wasm_thread",
+ "web-time",
 ]
 
 [[package]]
@@ -13760,6 +13503,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "13c2bddecc57b384dee18652358fb23172facb8a2c51ccc10d74c157bdea3292"
 
 [[package]]
+name = "sum-tree"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "heapless",
+ "rayon",
+ "tracing",
+ "ztracing",
+]
+
+[[package]]
 name = "suppaftp"
 version = "12.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13969,18 +13723,6 @@ dependencies = [
  "rustix 0.38.44",
  "windows-sys 0.59.0",
  "winx",
-]
-
-[[package]]
-name = "taffy"
-version = "0.13.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c034e05f6ee85a12daa63863c2245797715075c70649947aa0da54f3f2ab1d0f"
-dependencies = [
- "arrayvec",
- "serde",
- "slotmap",
- "smallvec",
 ]
 
 [[package]]
@@ -15453,17 +15195,6 @@ name = "wasm_thread"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7516db7f32decdadb1c3b8deb1b7d78b9df7606c5cc2f6241737c2ab3a0258e"
-dependencies = [
- "futures",
- "js-sys",
- "wasm-bindgen",
- "web-sys",
-]
-
-[[package]]
-name = "wasm_thread"
-version = "0.3.3"
-source = "git+https://github.com/zed-industries/wasm_thread?rev=0cf96c7708dfb97ccf3da50347e25edcf75d6937#0cf96c7708dfb97ccf3da50347e25edcf75d6937"
 dependencies = [
  "futures",
  "js-sys",
@@ -17349,22 +17080,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "xim-ctext"
-version = "0.3.0"
-source = "git+https://github.com/zed-industries/xim-rs.git?rev=16f35a2c881b815a2b6cdfd6687988e84f8447d8#16f35a2c881b815a2b6cdfd6687988e84f8447d8"
-dependencies = [
- "encoding_rs",
-]
-
-[[package]]
-name = "xim-parser"
-version = "0.2.1"
-source = "git+https://github.com/zed-industries/xim-rs.git?rev=16f35a2c881b815a2b6cdfd6687988e84f8447d8#16f35a2c881b815a2b6cdfd6687988e84f8447d8"
-dependencies = [
- "bitflags 2.13.2",
-]
-
-[[package]]
 name = "xim-parser"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -17616,27 +17331,51 @@ dependencies = [
 ]
 
 [[package]]
-name = "zed-font-kit"
-version = "0.14.1-zed"
-source = "git+https://github.com/zed-industries/font-kit?rev=94b0f28166665e8fd2f53ff6d268a14955c82269#94b0f28166665e8fd2f53ff6d268a14955c82269"
+name = "zed-reqwest"
+version = "0.12.15-zed"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac2d05756ff48539950c3282ad7acf3817ad3f08797c205ad1c34a2ce03b9970"
 dependencies = [
- "bitflags 2.13.2",
- "byteorder",
- "core-foundation 0.10.1",
- "core-graphics 0.24.0",
- "core-text",
- "dirs 6.0.0",
- "dwrote",
- "float-ord",
- "freetype-sys",
- "lazy_static",
- "libc",
+ "base64 0.22.1",
+ "bytes",
+ "futures-core",
+ "futures-util",
+ "h2",
+ "http",
+ "http-body",
+ "http-body-util",
+ "hyper",
+ "hyper-rustls",
+ "hyper-util",
+ "ipnet",
+ "js-sys",
  "log",
- "pathfinder_geometry",
- "pathfinder_simd",
- "walkdir",
- "winapi",
- "yeslogic-fontconfig-sys",
+ "mime",
+ "once_cell",
+ "percent-encoding",
+ "pin-project-lite",
+ "quinn",
+ "rustls 0.23.45",
+ "rustls-native-certs 0.8.4",
+ "rustls-pemfile 2.2.0",
+ "rustls-pki-types",
+ "serde",
+ "serde_json",
+ "serde_urlencoded",
+ "sync_wrapper",
+ "system-configuration 0.6.1",
+ "tokio",
+ "tokio-rustls 0.26.6",
+ "tokio-socks",
+ "tokio-util",
+ "tower",
+ "tower-service",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-streams",
+ "web-sys",
+ "windows-registry 0.4.0",
 ]
 
 [[package]]
@@ -17711,27 +17450,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "zed-scap"
-version = "0.0.8-zed"
-source = "git+https://github.com/zed-industries/scap?rev=4afea48c3b002197176fb19cd0f9b180dd36eaac#4afea48c3b002197176fb19cd0f9b180dd36eaac"
-dependencies = [
- "anyhow",
- "cocoa 0.25.0",
- "core-graphics-helmer-fork",
- "log",
- "objc",
- "rand 0.8.8",
- "screencapturekit",
- "screencapturekit-sys",
- "sysinfo 0.31.4",
- "tao-core-video-sys",
- "windows 0.61.3",
- "windows-capture",
- "x11",
- "xcb",
-]
-
-[[package]]
 name = "zed-xim"
 version = "0.4.0-zed"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -17741,21 +17459,8 @@ dependencies = [
  "hashbrown 0.14.5",
  "log",
  "x11rb",
- "xim-ctext 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "xim-parser 0.2.2",
-]
-
-[[package]]
-name = "zed-xim"
-version = "0.4.0-zed"
-source = "git+https://github.com/zed-industries/xim-rs.git?rev=16f35a2c881b815a2b6cdfd6687988e84f8447d8#16f35a2c881b815a2b6cdfd6687988e84f8447d8"
-dependencies = [
- "ahash",
- "hashbrown 0.14.5",
- "log",
- "x11rb",
- "xim-ctext 0.3.0 (git+https://github.com/zed-industries/xim-rs.git?rev=16f35a2c881b815a2b6cdfd6687988e84f8447d8)",
- "xim-parser 0.2.1",
+ "xim-ctext",
+ "xim-parser",
 ]
 
 [[package]]
@@ -17969,6 +17674,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "ztracing"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+dependencies = [
+ "tracing",
+ "ztracing-macro",
+]
+
+[[package]]
+name = "ztracing-macro"
+version = "0.1.8"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[package]]
 name = "zune-core"
 version = "0.5.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -18035,11 +17754,81 @@ dependencies = [
 ]
 
 [[patch.unused]]
+name = "gpui-pre-apple"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
 name = "gpui-pre-bench-metrics"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-collections"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-derive-refineable"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-http-client"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-http-client-tls"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-linux"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-macos"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-refineable"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-scheduler"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-shared-string"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-wgpu"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-windows"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
 
 [[patch.unused]]
 name = "gpui-pre-zlog"
 version = "0.3.126"
-source = "git+https://github.com/feigeCode/gpui-pre.git?tag=fork-0.3.126#9e410c8f92aa839ac4f855ee5c06ce72e40e65ad"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-ztracing"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
+
+[[patch.unused]]
+name = "gpui-pre-ztracing-macro"
+version = "0.3.126"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.8#885b4286f6c0b5cbeb1608bb214f64392e971770"
