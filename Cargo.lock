@@ -5023,7 +5023,7 @@ dependencies = [
 [[package]]
 name = "gpui-base"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -5064,7 +5064,7 @@ dependencies = [
 [[package]]
 name = "gpui-component"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "anyhow",
  "chrono",
@@ -5118,7 +5118,7 @@ dependencies = [
 [[package]]
 name = "gpui-component-macros"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "proc-macro-crate 3.5.0",
  "proc-macro2",
@@ -5129,7 +5129,7 @@ dependencies = [
 [[package]]
 name = "gpui-component-shell"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "gpui-component",
  "gpui-shell",
@@ -5137,8 +5137,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "accesskit",
  "anyhow",
@@ -5191,7 +5191,7 @@ dependencies = [
  "smallvec",
  "spin 0.10.1",
  "strum 0.28.0",
- "taffy",
+ "taffy 0.14.0",
  "thiserror 2.0.21",
  "ttf-parser",
  "url",
@@ -5205,8 +5205,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-apple"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "anyhow",
  "async-task",
@@ -5235,8 +5235,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-linux"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "accesskit",
  "accesskit_unix",
@@ -5279,8 +5279,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-macos"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "accesskit",
  "accesskit_macos",
@@ -5321,8 +5321,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-macros"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "heck 0.5.0",
  "proc-macro2",
@@ -5332,8 +5332,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-platform"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -5346,8 +5346,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-web"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "anyhow",
  "console_error_panic_hook",
@@ -5374,8 +5374,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-wgpu"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "anyhow",
  "bytemuck",
@@ -5400,8 +5400,8 @@ dependencies = [
 
 [[package]]
 name = "gpui-fast-windows"
-version = "0.1.6"
-source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.6#af0c3c4c8e6691bf833e77ccbbbbdf17ce8c1ff2"
+version = "0.1.7"
+source = "git+https://github.com/feigeCode/gpui-fast.git?branch=release%2Fv0.1.7#b4da6da455d1dcf97ef80842e5c22e6eeb76b185"
 dependencies = [
  "accesskit",
  "accesskit_windows",
@@ -5430,7 +5430,7 @@ dependencies = [
 [[package]]
 name = "gpui-fps"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "core-graphics 0.24.0",
  "gpui-fast",
@@ -5448,7 +5448,7 @@ dependencies = [
 [[package]]
 name = "gpui-kit"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "gpui-base",
  "gpui-component",
@@ -5465,7 +5465,7 @@ dependencies = [
 [[package]]
 name = "gpui-kit-assets"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "anyhow",
  "gpui-fast",
@@ -5530,7 +5530,7 @@ dependencies = [
  "smallvec",
  "spin 0.10.1",
  "strum 0.28.0",
- "taffy",
+ "taffy 0.13.0",
  "thiserror 2.0.21",
  "ttf-parser",
  "url",
@@ -5964,7 +5964,7 @@ dependencies = [
 [[package]]
 name = "gpui-shell"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "anyhow",
  "async-channel",
@@ -6001,7 +6001,7 @@ dependencies = [
 [[package]]
 name = "gpui-webview"
 version = "0.7.1"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "anyhow",
  "gpui-kit",
@@ -12072,7 +12072,7 @@ dependencies = [
 [[package]]
 name = "rquickjs"
 version = "0.12.9"
-source = "git+https://github.com/feigeCode/gpui-kit?rev=e746db5cf1ac1191070f26542f99c79b7f1c2879#e746db5cf1ac1191070f26542f99c79b7f1c2879"
+source = "git+https://github.com/feigeCode/gpui-kit?rev=c7cb49390ca79dba018d7604f33fb87893c36ff8#c7cb49390ca79dba018d7604f33fb87893c36ff8"
 dependencies = [
  "quickjs-jit",
 ]
@@ -13976,6 +13976,18 @@ name = "taffy"
 version = "0.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c034e05f6ee85a12daa63863c2245797715075c70649947aa0da54f3f2ab1d0f"
+dependencies = [
+ "arrayvec",
+ "serde",
+ "slotmap",
+ "smallvec",
+]
+
+[[package]]
+name = "taffy"
+version = "0.14.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "639627c87f43b9181c811f40a6296409e093a17bc761214cba3c15df74f86b99"
 dependencies = [
  "arrayvec",
  "serde",
