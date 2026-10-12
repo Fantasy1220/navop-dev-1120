@@ -457,6 +457,13 @@
 - **验证方式**：覆盖 running/submission-pending 允许、ready/awaiting-prompt not-running、busy/unknown/disconnected 零写入、预取消零入队、control 后 observer 仍由真实终态完成；验证 Agent prompt 区分 `terminal_exec`、`terminal_control` 与取消按钮。
 - **适用范围**：`crates/terminal/src/exec_supervisor/*`、`crates/terminal/src/ssh_backend.rs`、`crates/terminal_view/src/public_mcp.rs`、Public MCP terminal control 工具与 Agent prompt。
 
+- **标题**：嵌套 shell 卡死 terminal_busy 用 reintegrate 注入恢复，不要尝试 Ctrl+C
+- **触发信号**：用户在可见 SSH 终端里进入 `sudo -i`、`su` 等嵌套 shell 后，`terminal.exec` 持续报 busy，且 `terminal.control action=interrupt` 发过 ETX 仍不恢复；滚屏看是空闲 root 提示符，session state 正常 connected。
+- **根因 / 约束**：shell integration 是登录时一次 eval 注入，不写 rc 文件，嵌套 shell 不继承；root shell 的提示符不再发 OSC 133/OSC 7，supervisor readiness 卡死在 `SubmissionPending`/`CommandRunning` 瞬态（cwd 也停在上报值）。ETX 对无集成 shell 无意义——空提示符上只回显 `^C` 重画提示符，不产生 OSC 事件，readiness 不会翻转；`on_input` 只在 `Ready` 态处理用户回车，手动按回车也救不回来。
+- **正确做法**：`terminal.control action=reintegrate`（High 风险显式动作）：actor 校验无 exec 在途且未断连（`ExecSupervisor::reintegrate_shell`，卡在瞬态 readiness 时放行），向 PTY 写 `runtime_shell_integration_command()`（幂等守卫已剥，root login shell 重置了环境变量，eval 必然生效）。注入后新提示符的 OSC `InputStart` 无条件把 readiness 翻回 Ready，状态机零改动自愈；Agent 等 1-2 秒后重试 exec。Busy 错误必须带 `BusyContext{readiness}` 富化文案引导 Agent 走 read→reintegrate→retry 链路，不要裸字符串。本地终端 reintegrate 返回 `terminal_control_unsupported`（本地集成形态不同，POSIX eval 注入体不适用），未来支持时在 local actor 接对应注入体。
+- **验证方式**：`cargo test -p terminal --lib reintegrate`（门控 fail-closed、瞬态放行、端到端自愈、SSH actor 注入 contract、local Unsupported contract）+ `cargo test -p public_mcp --test terminal_control`（schema enum、parse、reintegrate 结果 readiness_before=null、未知 action 拒绝）+ 三 crate 全量回归与 clippy。
+- **适用范围**：`crates/terminal/src/exec_supervisor/*`、`crates/terminal/src/ssh_backend.rs`、`crates/terminal/src/pty_backend.rs`、`crates/public_mcp/src/tools/terminal_control.rs`、Agent terminal 工具 prompt 与错误文案。
+
 - **标题**：Agent Auto 模式不进行工具审批，High/Critical 也直接执行
 - **触发信号**：Auto 模式下出现 `NeedUserInput` 工具确认卡，或 Agent→tool_runtime 映射仍把 high-risk policy 设为 `Ask`。
 - **根因 / 约束**：`ToolExecutionMode::Auto` 表达用户已授权 Agent 自主执行当前暴露工具；风险等级仍用于展示、审计和 Manual 模式审批，但不能在 Auto 模式再次暂停。`ReadOnly` 仍通过工具暴露过滤保证只读，不能用 Auto 的放行规则扩大其工具集合。

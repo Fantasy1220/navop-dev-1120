@@ -37,6 +37,7 @@ mod sql_editor_hover;
 mod sql_editor_signature;
 pub mod sql_editor_view;
 pub(crate) mod sql_inline_completion;
+pub mod sql_library;
 mod sql_object_details_tab;
 pub mod sql_result_tab;
 #[cfg(test)]

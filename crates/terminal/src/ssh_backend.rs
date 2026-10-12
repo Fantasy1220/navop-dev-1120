@@ -1024,34 +1024,77 @@ impl SshBackend {
                                     let _ = result.send(Err(TerminalControlError::Cancelled));
                                     continue;
                                 }
-                                let readiness = match request.action {
+                                match request.action {
                                     TerminalControlAction::Interrupt => {
-                                        exec_supervisor.interrupt_foreground()
-                                    }
-                                };
-                                match readiness {
-                                    Ok(readiness_before) => {
-                                        match send_terminal_data(&mut channel, &[0x03])
-                                            .await
-                                            .context("failed to send Ctrl-C over SSH")
-                                        {
-                                            Ok(()) => {
-                                                let _ = result.send(Ok(TerminalControlOutput {
-                                                    action: request.action,
-                                                    sent: true,
-                                                    readiness_before,
-                                                }));
+                                        let readiness = exec_supervisor.interrupt_foreground();
+                                        match readiness {
+                                            Ok(readiness_before) => {
+                                                match send_terminal_data(&mut channel, &[0x03])
+                                                    .await
+                                                    .context("failed to send Ctrl-C over SSH")
+                                                {
+                                                    Ok(()) => {
+                                                        let _ = result.send(
+                                                            Ok(TerminalControlOutput {
+                                                                action: request.action,
+                                                                sent: true,
+                                                                readiness_before: Some(
+                                                                    readiness_before,
+                                                                ),
+                                                            }),
+                                                        );
+                                                    }
+                                                    Err(error) => {
+                                                        let _ = result.send(
+                                                            Err(TerminalControlError::Disconnected),
+                                                        );
+                                                        disconnect_error = Some(error);
+                                                        break;
+                                                    }
+                                                }
                                             }
                                             Err(error) => {
-                                                let _ = result
-                                                    .send(Err(TerminalControlError::Disconnected));
-                                                disconnect_error = Some(error);
-                                                break;
+                                                let _ = result.send(Err(error));
                                             }
                                         }
                                     }
-                                    Err(error) => {
-                                        let _ = result.send(Err(error));
+                                    TerminalControlAction::Reintegrate => {
+                                        // 嵌套 shell（sudo -i / su）丢失 integration 后，
+                                        // readiness 卡死在瞬态。注入运行时集成脚本：
+                                        // 新提示符的 OSC InputStart 会无条件把 readiness
+                                        // 翻回 Ready，supervisor 状态自愈。
+                                        match exec_supervisor.reintegrate_shell() {
+                                            Ok(()) => {
+                                                let command = crate::ssh_shell_integration::
+                                                    runtime_shell_integration_command();
+                                                match send_terminal_data(&mut channel, &command)
+                                                    .await
+                                                    .context(
+                                                        "failed to inject shell integration over SSH",
+                                                    )
+                                                {
+                                                    Ok(()) => {
+                                                        let _ = result.send(
+                                                            Ok(TerminalControlOutput {
+                                                                action: request.action,
+                                                                sent: true,
+                                                                readiness_before: None,
+                                                            }),
+                                                        );
+                                                    }
+                                                    Err(error) => {
+                                                        let _ = result.send(
+                                                            Err(TerminalControlError::Disconnected),
+                                                        );
+                                                        disconnect_error = Some(error);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            Err(error) => {
+                                                let _ = result.send(Err(error));
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -3044,7 +3087,7 @@ mod tests {
         let output = TerminalControlOutput {
             action: TerminalControlAction::Interrupt,
             sent: true,
-            readiness_before: TerminalControlReadiness::CommandRunning,
+            readiness_before: Some(TerminalControlReadiness::CommandRunning),
         };
         match command_rx.recv().await {
             Some(SshCommand::InterruptForeground { result, .. }) => {

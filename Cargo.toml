@@ -57,15 +57,15 @@ edition = "2024"
 # (`gpui_component`, `gpui_base`, `gpui_shell`, ...).
 # navop 强制 gpui-fast：所有 gpui-kit 系 crate 统一带 features = ["gpui-fast"]，
 # 经 feature 统一把整套 UI 栈切到 GPUI Fast 后端（外部 crate 名 gpui-fast-*）。
-gpui-component = { git = "https://github.com/feigeCode/gpui-kit", rev = "c7cb49390ca79dba018d7604f33fb87893c36ff8", features = ["gpui-fast"] }
-gpui-component-assets = { package = "gpui-kit-assets", git = "https://github.com/feigeCode/gpui-kit", rev = "c7cb49390ca79dba018d7604f33fb87893c36ff8", features = ["gpui-fast"] }
-gpui-base = { git = "https://github.com/feigeCode/gpui-kit", rev = "c7cb49390ca79dba018d7604f33fb87893c36ff8", features = ["gpui-fast"] }
-gpui-shell = { git = "https://github.com/feigeCode/gpui-kit", rev = "c7cb49390ca79dba018d7604f33fb87893c36ff8", features = ["gpui-fast"] }
-gpui-component-shell = { git = "https://github.com/feigeCode/gpui-kit", rev = "c7cb49390ca79dba018d7604f33fb87893c36ff8", features = ["gpui-fast"] }
+gpui-component = { git = "https://github.com/feigeCode/gpui-kit", rev = "c43fe63395ce135cbc1a087e1d303318e0bcbfd7", features = ["gpui-fast"] }
+gpui-component-assets = { package = "gpui-kit-assets", git = "https://github.com/feigeCode/gpui-kit", rev = "c43fe63395ce135cbc1a087e1d303318e0bcbfd7", features = ["gpui-fast"] }
+gpui-base = { git = "https://github.com/feigeCode/gpui-kit", rev = "c43fe63395ce135cbc1a087e1d303318e0bcbfd7", features = ["gpui-fast"] }
+gpui-shell = { git = "https://github.com/feigeCode/gpui-kit", rev = "c43fe63395ce135cbc1a087e1d303318e0bcbfd7", features = ["gpui-fast"] }
+gpui-component-shell = { git = "https://github.com/feigeCode/gpui-kit", rev = "c43fe63395ce135cbc1a087e1d303318e0bcbfd7", features = ["gpui-fast"] }
 # gpui-webview（原 gpui-wry）强制 GPUI Fast；#3398 后它依赖
 # gpui-pre-util =0.3.8 的版本要求与下面的 fork 快照天然一致（同一 snapshot 0.3.126）。
-gpui-webview = { git = "https://github.com/feigeCode/gpui-kit", rev = "c7cb49390ca79dba018d7604f33fb87893c36ff8" }
-gpui-kit = { git = "https://github.com/feigeCode/gpui-kit", rev = "c7cb49390ca79dba018d7604f33fb87893c36ff8", features = ["gpui-fast"] }
+gpui-webview = { git = "https://github.com/feigeCode/gpui-kit", rev = "c43fe63395ce135cbc1a087e1d303318e0bcbfd7" }
+gpui-kit = { git = "https://github.com/feigeCode/gpui-kit", rev = "c43fe63395ce135cbc1a087e1d303318e0bcbfd7", features = ["gpui-fast"] }
 
 gpui = { package = "gpui-fast", version = "0.1" }
 gpui_platform = { package = "gpui-fast-platform", version = "0.1", features = ["font-kit", "x11", "wayland", "runtime_shaders"] }
@@ -380,7 +380,7 @@ gpui-fast-windows          = { git = "https://github.com/feigeCode/gpui-fast.git
 # live in this root manifest: [patch] sections inside the gpui-component
 # workspace are ignored by cargo. Mirrors the same entry in gpui-component's
 # workspace root, pinned to the same revision as the gpui dependencies above.
-rquickjs = { git = "https://github.com/feigeCode/gpui-kit", rev = "c7cb49390ca79dba018d7604f33fb87893c36ff8" }
+rquickjs = { git = "https://github.com/feigeCode/gpui-kit", rev = "c43fe63395ce135cbc1a087e1d303318e0bcbfd7" }
 
 # navop 全量 gpui-fast 后，整套 gpui-fast-* 都进编译图；同名源已在上面
 # [patch.crates-io] 块内统一钉到 release/v0.1.5-navop.2，此处不再重复声明。
