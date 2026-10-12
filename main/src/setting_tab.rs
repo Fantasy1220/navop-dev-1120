@@ -997,22 +997,38 @@ impl SettingsPanel {
                     .keywords([t!("LlmProviders.title").to_string()]),
                 ),
             ),
-            // 账户设置页
-            SettingPage::new(t!("Settings.Account.title")).group(
-                SettingGroup::new().item(
-                    SettingItem::render(move |_options, window, cx| {
-                        render_account_section(window, cx)
-                    })
-                    .keywords([
-                        t!("Settings.Account.title").to_string(),
-                        t!("Settings.Account.username").to_string(),
-                        t!("Settings.Account.email").to_string(),
-                        t!("Settings.Account.not_logged_in").to_string(),
-                        t!("Auth.logout").to_string(),
-                        t!("License.import_offline").to_string(),
-                    ]),
+            // 账户设置页：账户信息与主密钥是两件独立的事——没有账户也可以有主密钥，
+// 所以拆成两个并列分组，关系与「关于 / 更新」一致。
+            SettingPage::new(t!("Settings.Account.title"))
+                .group(
+                    SettingGroup::new().title(t!("Settings.Account.title")).item(
+                        SettingItem::render(move |_options, window, cx| {
+                            render_account_section(window, cx)
+                        })
+                        .keywords([
+                            t!("Settings.Account.title").to_string(),
+                            t!("Settings.Account.username").to_string(),
+                            t!("Settings.Account.email").to_string(),
+                            t!("Settings.Account.not_logged_in").to_string(),
+                            t!("Auth.logout").to_string(),
+                            t!("License.import_offline").to_string(),
+                        ]),
+                    ),
+                )
+                .group(
+                    SettingGroup::new()
+                        .title(t!("Settings.Account.master_key_section"))
+                        .item(
+                            SettingItem::render(move |_options, _window, cx| {
+                                master_key_section(cx)
+                            })
+                            .keywords([
+                                t!("Settings.Account.master_key_section").to_string(),
+                                t!("Encryption.change_repo_password").to_string(),
+                                t!("Encryption.reset_master_key").to_string(),
+                            ]),
+                        ),
                 ),
-            ),
             // 关于页面
             SettingPage::new(t!("Settings.About.title"))
                 .group(
@@ -3050,6 +3066,53 @@ fn render_account_section(_window: &mut Window, cx: &App) -> gpui::AnyElement {
             )
             .into_any_element()
     }
+}
+
+/// 账户页的「主密钥」区块：只放修改与重置两个入口。
+///
+/// 重置时要删哪些数据是「每一次重置」的决定，不是长期配置，所以勾选项放进重置
+/// 弹窗里当场选（默认全选），设置页不再维护这份开关。
+fn master_key_section(cx: &App) -> gpui::Div {
+    v_flex()
+        .gap_3()
+        .w_full()
+        .child(
+            div()
+                .text_base()
+                .font_weight(FontWeight::SEMIBOLD)
+                .child(t!("Settings.Account.master_key_section").to_string()),
+        )
+        .child(
+            div()
+                .text_sm()
+                .text_color(cx.theme().muted_foreground)
+                .child(t!("Settings.Account.master_key_section_desc").to_string()),
+        )
+        .child(
+            h_flex()
+                .gap_2()
+                .child(
+                    Button::new("change-master-key-button")
+                        .icon(IconName::Edit)
+                        .label(t!("Encryption.change_repo_password").to_string())
+                        .on_click(|_, window, cx| {
+                            crate::master_key_dialogs::show_change_master_key_dialog(
+                                window, cx, None,
+                            );
+                        }),
+                )
+                .child(
+                    Button::new("reset-master-key-button")
+                        .icon(IconName::Delete)
+                        .label(t!("Encryption.reset_master_key").to_string())
+                        .danger()
+                        .on_click(|_, window, cx| {
+                            crate::master_key_dialogs::show_reset_master_key_dialog(
+                                window, cx, None,
+                            );
+                        }),
+                ),
+        )
 }
 
 // ============================================================================
