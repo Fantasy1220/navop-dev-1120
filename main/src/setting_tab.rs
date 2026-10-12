@@ -581,6 +581,11 @@ impl SettingsPanel {
                                             effective_locale_for_setting(&locale);
                                         gpui_component::set_locale(effective_locale);
                                         notes::set_markdown_editor_locale(effective_locale, cx);
+                                        // 扩展页自己带词条表，读的是宿主的语言事实
+                                        // (`navop.i18n.locale()`)；而页面描述重建不会
+                                        // 因为 set_locale 自己发生 —— 必须显式叫醒
+                                        // 它们，否则页面停在旧语言上。
+                                        universal_plugins::refresh_shell_views(cx);
                                         AppSettings::update_and_save(cx, |settings| {
                                             settings.locale = locale;
                                         });
@@ -4162,6 +4167,30 @@ mod tests {
         assert!(locales.contains("Anyone who obtains both the application"));
         assert!(locales.contains("任何同时获得应用程序和完整 data 目录的人"));
         assert!(locales.contains("任何同時取得應用程式和完整 data 目錄的人"));
+    }
+
+    /// 切界面语言必须**叫醒已挂载的扩展页面**。
+    ///
+    /// 扩展页的文案不在宿主的 rust-i18n 目录里：页面自己带词条表，只从宿主读
+    /// 「现在是什么语言」（`navop.i18n.locale()`）。而 `gpui_component::set_locale`
+    /// 只换宿主自己的词条，**不会**让脚本重建页面描述 —— 少了这一行，界面切了、
+    /// 扩展页停在旧语言上，且不报任何错。
+    ///
+    /// 断言两件事：这行在实现里存在，且在语言下拉的 `set_locale` 之后 ——
+    /// 顺序反了会读到上一个语言值。
+    #[test]
+    fn changing_the_ui_language_reruns_mounted_extension_views() {
+        let source = implementation_source();
+        let set_locale = source
+            .find("gpui_component::set_locale(effective_locale);")
+            .expect("语言下拉里应有一处 set_locale");
+        let refresh = source
+            .find("universal_plugins::refresh_shell_views(cx)")
+            .expect("切语言后必须让扩展页重跑脚本");
+        assert!(
+            refresh > set_locale,
+            "刷新扩展页要排在 set_locale 之后，否则扩展读到的是上一个语言值"
+        );
     }
 
     #[test]
