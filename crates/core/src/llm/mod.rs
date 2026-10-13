@@ -6,7 +6,7 @@ pub mod notifier;
 pub mod storage;
 pub mod types;
 
-pub use connector::{ChatStream, LlmConnector, LlmProvider};
+pub use connector::{ChatStream, LlmConnector, LlmProvider, default_api_base};
 pub use manager::{GlobalProviderState, ProviderManager};
 pub use navop_provider::NavopLLMProvider;
 pub use types::{ProviderConfig, ProviderType};
