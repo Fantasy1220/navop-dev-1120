@@ -3,23 +3,57 @@
 use gpui::prelude::FluentBuilder;
 use gpui::{
     App, AppContext, AsyncApp, Context, Entity, FocusHandle, Focusable, IntoElement, ParentElement,
-    Render, SharedString, Styled, WeakEntity, Window, div,
+    Render, SharedString, Styled, Subscription, WeakEntity, Window, div,
 };
 use gpui_component::{
     ActiveTheme, Disableable, IndexPath, WindowExt,
     button::{Button, ButtonVariant, ButtonVariants},
     h_flex,
     input::{Input, InputState},
-    select::{Select, SelectItem, SelectState},
+    select::{Select, SelectEvent, SelectItem, SelectState},
     switch::Switch,
     v_flex,
 };
 use one_core::gpui_tokio::Tokio;
+use one_core::llm::default_api_base;
 use one_core::llm::manager::GlobalProviderState;
 use one_core::llm::types::{ProviderConfig, ProviderType};
 use rust_i18n::t;
 
 const CUSTOM_MODEL_ID: &str = "__custom__";
+
+/// 切换供应商类型后 api_base 输入框应采取的动作。
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum ApiBaseAction {
+    /// 保持用户当前输入不变。
+    Keep,
+    /// 清空输入框：新类型没有通用默认地址。
+    Clear,
+    /// 写入新类型的默认地址。
+    Set(String),
+}
+
+/// 切换供应商类型后 api_base 该显示什么。
+///
+/// 只在输入框为空、或内容仍等于上一次自动预填值时才改写，
+/// 以免切类型时把用户手填的自建 / 代理地址冲掉。
+fn api_base_action_on_type_change(
+    current: &str,
+    last_applied_preset: Option<&str>,
+    new_type: ProviderType,
+) -> ApiBaseAction {
+    let current = current.trim();
+    let untouched = current.is_empty() || Some(current) == last_applied_preset;
+
+    if !untouched {
+        return ApiBaseAction::Keep;
+    }
+
+    match default_api_base(new_type) {
+        Some(preset) => ApiBaseAction::Set(preset.to_string()),
+        None => ApiBaseAction::Clear,
+    }
+}
 
 /// Provider 类型选择项
 #[derive(Clone, Debug)]
@@ -143,6 +177,9 @@ pub struct ProviderForm {
     is_default: bool,
     models_loading: bool,
     model_load_status: Option<ModelLoadStatus>,
+    /// 当前 api_base 输入框里是不是上一次自动预填的值（用于判断能否安全改写）。
+    last_applied_preset: Option<String>,
+    _subscriptions: Vec<Subscription>,
 }
 
 impl ProviderForm {
@@ -169,6 +206,15 @@ impl ProviderForm {
                 .map(|i| IndexPath::new(i))
         } else {
             Some(IndexPath::new(0))
+        };
+
+        // 与上面 selected_index 的取值来源保持一致，但不依赖 IndexPath 内部字段。
+        let selected_type = match config.as_ref() {
+            Some(cfg) => cfg.provider_type,
+            None => provider_types
+                .first()
+                .map(|item| item.provider_type)
+                .unwrap_or(ProviderType::OpenAI),
         };
 
         let provider_type_select =
@@ -243,6 +289,49 @@ impl ProviderForm {
                 .collect()
         };
 
+        // 编辑既有配置时，如果存下来的 api_base 正好等于该类型的默认值，
+        // 就认为它仍是「未被改过的预填值」，后续切类型可以安全改写。
+        let last_applied_preset = config
+            .as_ref()
+            .and_then(|cfg| cfg.api_base.clone())
+            .filter(|base| default_api_base(selected_type) == Some(base.as_str()));
+
+        // 切换供应商类型时把默认地址预填进 api_base，让用户知道该填什么。
+        let subscription = cx.subscribe_in(
+            &provider_type_select,
+            window,
+            |form: &mut Self, _, event: &SelectEvent<Vec<ProviderTypeItem>>, window, cx| {
+                let SelectEvent::Confirm(Some(provider_type)) = event else {
+                    return;
+                };
+
+                let current = form.api_base_input.read(cx).value().to_string();
+                let action = api_base_action_on_type_change(
+                    &current,
+                    form.last_applied_preset.as_deref(),
+                    *provider_type,
+                );
+
+                match action {
+                    ApiBaseAction::Keep => {}
+                    ApiBaseAction::Clear => {
+                        form.api_base_input.update(cx, |input, cx| {
+                            input.set_value("", window, cx);
+                        });
+                        form.last_applied_preset = None;
+                    }
+                    ApiBaseAction::Set(preset) => {
+                        form.api_base_input.update(cx, |input, cx| {
+                            input.set_value(preset.clone(), window, cx);
+                        });
+                        form.last_applied_preset = Some(preset);
+                    }
+                }
+
+                cx.notify();
+            },
+        );
+
         Self {
             focus_handle,
             provider_id: config.clone().map(|c| c.id),
@@ -256,6 +345,8 @@ impl ProviderForm {
             is_default: config.map(|cfg| cfg.is_default).unwrap_or(false),
             models_loading: false,
             model_load_status: None,
+            last_applied_preset,
+            _subscriptions: vec![subscription],
         }
     }
 
@@ -762,5 +853,70 @@ impl Render for ProviderForm {
                     )
                     .child(t!("LlmProviders.set_default").to_string()),
             )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ApiBaseAction, api_base_action_on_type_change};
+    use one_core::llm::types::ProviderType;
+
+    #[test]
+    fn empty_input_is_filled_with_the_new_type_preset() {
+        assert_eq!(
+            ApiBaseAction::Set("https://openrouter.ai/api/v1".to_string()),
+            api_base_action_on_type_change("", None, ProviderType::OpenRouter)
+        );
+    }
+
+    #[test]
+    fn whitespace_only_input_counts_as_empty() {
+        assert_eq!(
+            ApiBaseAction::Set("https://api.siliconflow.cn/v1".to_string()),
+            api_base_action_on_type_change("   ", None, ProviderType::SiliconFlow)
+        );
+    }
+
+    #[test]
+    fn untouched_previous_preset_is_replaced_by_the_new_one() {
+        assert_eq!(
+            ApiBaseAction::Set("https://api.siliconflow.cn/v1".to_string()),
+            api_base_action_on_type_change(
+                "https://openrouter.ai/api/v1",
+                Some("https://openrouter.ai/api/v1"),
+                ProviderType::SiliconFlow,
+            )
+        );
+    }
+
+    #[test]
+    fn switching_to_a_type_without_preset_clears_an_untouched_preset() {
+        assert_eq!(
+            ApiBaseAction::Clear,
+            api_base_action_on_type_change(
+                "https://openrouter.ai/api/v1",
+                Some("https://openrouter.ai/api/v1"),
+                ProviderType::OpenAICompatible,
+            )
+        );
+    }
+
+    #[test]
+    fn hand_written_base_url_is_never_overwritten() {
+        for new_type in [
+            ProviderType::OpenRouter,
+            ProviderType::OpenAICompatible,
+            ProviderType::SiliconFlow,
+        ] {
+            assert_eq!(
+                ApiBaseAction::Keep,
+                api_base_action_on_type_change(
+                    "https://gateway.internal.example.com/v1",
+                    Some("https://openrouter.ai/api/v1"),
+                    new_type,
+                ),
+                "切到 {new_type:?} 时不应覆盖用户手填地址"
+            );
+        }
     }
 }
