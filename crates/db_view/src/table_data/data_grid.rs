@@ -529,8 +529,10 @@ pub struct LargeTextCellTarget {
 struct TextEditorDialogRequest {
     initial_text: String,
     title: String,
-    row_ix: usize,
-    col_ix: usize,
+    /// 显示行号：确认时再换算成实际行（弹窗开着的时候表格可能已经刷新过）。
+    display_row_ix: usize,
+    /// 原始列下标：写回直接用它，不再从网格列反推。
+    original_col_ix: usize,
     editable: bool,
 }
 
@@ -1009,6 +1011,20 @@ pub(super) fn grid_column_of_display_col(display_col: usize, row_number_enabled:
         display_col + 1
     } else {
         display_col
+    }
+}
+
+/// [`grid_column_of_display_col`] 的逆：网格列（含行号列）→ 展示列（只数数据列）。
+///
+/// 行号列的位置上取不到数据列，返回 `None`。
+pub(super) fn display_col_of_grid_column(
+    grid_col: usize,
+    row_number_enabled: bool,
+) -> Option<usize> {
+    if row_number_enabled {
+        grid_col.checked_sub(1)
+    } else {
+        Some(grid_col)
     }
 }
 
@@ -2824,9 +2840,8 @@ impl DataGrid {
                     .or_else(|| state.selected_cell().map(|(row_ix, _)| row_ix)),
             );
 
-            for row_ix in row_indices {
-                state.delete_row(row_ix, window, cx);
-            }
+            // 整批交给委托：逐行删除时行集与筛选映射会变，后面的显示行号会落到别的行上。
+            state.delete_rows(&row_indices, window, cx);
         });
     }
 
@@ -2942,8 +2957,8 @@ impl DataGrid {
             TextEditorDialogRequest {
                 initial_text: target.value,
                 title: build_large_text_editor_title(&target.column_name, target.display_row_ix),
-                row_ix: target.display_row_ix,
-                col_ix: target.col_ix + 1,
+                display_row_ix: target.display_row_ix,
+                original_col_ix: target.col_ix,
                 editable: target.editable,
             },
             window,
@@ -2951,29 +2966,21 @@ impl DataGrid {
         );
     }
 
+    /// 选中单元格对应的大文本编辑目标。
+    ///
+    /// 选中坐标是网格坐标，换算（展示列 → 原始列、显示行 → 实际行）一律交给
+    /// delegate，见 [`EditorTableDelegate::large_text_cell_target`]。
     pub fn selected_large_text_target(&self, cx: &App) -> Option<LargeTextCellTarget> {
         let table = self.table.read(cx);
-        let (display_row_ix, selected_col_ix) = table.selected_cell()?;
-        let col_ix = selected_col_ix.checked_sub(1)?;
+        let (display_row_ix, grid_col_ix) = table.selected_cell()?;
         let delegate = table.delegate();
-        let actual_row_ix = delegate.resolve_display_row(display_row_ix)?;
-        let value = delegate.editable_cell_text(actual_row_ix, col_ix);
-        let column_name = delegate
-            .columns
-            .get(col_ix)
-            .map(|col| col.name.to_string())
-            .unwrap_or_else(|| {
-                t!("TableDataGrid.column_label", index = selected_col_ix).to_string()
-            });
 
-        Some(LargeTextCellTarget {
+        delegate.large_text_cell_target(
             display_row_ix,
-            actual_row_ix,
-            col_ix,
-            column_name,
-            value,
-            editable: self.config.editable,
-        })
+            grid_col_ix,
+            delegate.row_number_enabled(cx),
+            self.config.editable,
+        )
     }
 
     pub fn apply_large_text_target_value(
@@ -3040,14 +3047,16 @@ impl DataGrid {
                             data_grid.table.update(cx, |state, cx| {
                                 let delegate = state.delegate_mut();
                                 let Some(actual_row_ix) =
-                                    delegate.resolve_display_row(request.row_ix)
+                                    delegate.resolve_display_row(request.display_row_ix)
                                 else {
                                     return false;
                                 };
 
-                                let col_index = request.col_ix.saturating_sub(1);
-                                let changed =
-                                    delegate.record_cell_change(actual_row_ix, col_index, val);
+                                let changed = delegate.record_cell_change(
+                                    actual_row_ix,
+                                    request.original_col_ix,
+                                    val,
+                                );
 
                                 if changed {
                                     state.refresh(cx);
