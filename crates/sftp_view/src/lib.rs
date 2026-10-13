@@ -12,6 +12,7 @@ mod host_key_prompt;
 mod left_credential_prompt;
 mod left_remote;
 mod left_remote_state;
+mod local_volume;
 mod ssh_config;
 
 use context_menu_handler::ContextMenuHandler;
@@ -1612,6 +1613,14 @@ pub struct SftpView {
     remote_path_editing: bool,
     local_path_input: Entity<InputState>,
     remote_path_input: Entity<InputState>,
+    /// 本地栏磁盘下拉的展开状态。
+    /// WIP：磁盘下拉 UI 未接线（checkpoint 93701c530），接线前无读者。
+    #[allow(dead_code)]
+    local_volume_popover_open: bool,
+    /// 缓存的可跳转本地卷；打开下拉时刷新，避免每帧读盘。
+    /// WIP：同上，接线前无读者。
+    #[allow(dead_code)]
+    local_volumes: Vec<local_volume::LocalVolume>,
     local_favorite_popover_open: bool,
     remote_favorite_popover_open: bool,
     local_favorite_search_input: Entity<InputState>,
@@ -1923,6 +1932,8 @@ impl SftpView {
             remote_path_editing: false,
             local_path_input,
             remote_path_input,
+            local_volume_popover_open: false,
+            local_volumes: local_volume::local_volumes(),
             local_favorite_popover_open: false,
             remote_favorite_popover_open: false,
             local_favorite_search_input,
@@ -3325,14 +3336,15 @@ impl SftpView {
             return;
         }
         if !new_path.is_empty() {
-            let path = PathBuf::from(&new_path);
+            // `D:` 在 Path 语义里是「D 盘的当前目录」，必须先补成 `D:\`。
+            let path = local_volume::normalize_local_path_input(&new_path);
             if path.exists() && path.is_dir() {
                 self.local_current_path = path;
                 self.refresh_local_dir(cx);
             } else {
                 let error_msg = format!(
                     "Error: ENOENT: no such file or directory, lstat '{}'",
-                    new_path
+                    path.to_string_lossy()
                 );
                 window.open_dialog(cx, move |dialog, _, _| {
                     dialog
