@@ -399,11 +399,18 @@ impl FontSettings {
 }
 
 /// Applies host-configured font stacks, keeping the previous settings on error.
+///
+/// The installed-family catalog is rebuilt on every call so fonts registered
+/// after [`crate::init`] (host-imported custom fonts) resolve correctly.
 pub fn set_font_stacks(
     preferences: FontPreferences,
     cx: &mut App,
 ) -> Result<(), FontStackParseError> {
-    FontSettings::update(cx, preferences)
+    let catalog = FontCatalog::from_names(cx.text_system().all_font_names());
+    let settings = FontSettings::resolve(preferences, &catalog, std::env::consts::OS)?;
+    cx.set_global(catalog);
+    cx.set_global(settings);
+    Ok(())
 }
 
 #[cfg(test)]

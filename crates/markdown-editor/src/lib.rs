@@ -16,6 +16,7 @@ mod icons;
 mod navop_host;
 mod navop_theme;
 mod net;
+mod outline;
 mod text_offsets;
 mod theme;
 mod wasm_highlight;
@@ -48,6 +49,7 @@ pub use host_services::{
 };
 pub use navop_host::markdown_editor_host_services;
 pub use navop_theme::MarkdownEditorTheme;
+pub use outline::{OutlineEntry, outline_entries};
 
 /// The embedded editor type exposed to Notes.
 pub type MarkdownEditor = editor::Editor;
