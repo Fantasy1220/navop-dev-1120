@@ -5,6 +5,7 @@ pub mod compare;
 mod auto_session;
 pub mod connection_form_window;
 pub mod database_objects_tab;
+#[cfg(test)]
 mod database_objects_tab_tests;
 pub mod database_tab;
 mod database_table_columns;
