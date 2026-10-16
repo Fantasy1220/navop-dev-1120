@@ -7,7 +7,7 @@ use crate::sql_editor::{
 };
 use crate::sql_result_tab::{
     ExecutionState, SessionSchemaInvalidation, SessionSqlRun, SqlResultTabContainer,
-    emit_schema_changed_events,
+    emit_invalidation_events,
 };
 use crate::table_ddl::TableDdlSources;
 use db::cache_manager::{GlobalNodeCache, SchemaInvalidationPlan};
@@ -4079,19 +4079,7 @@ impl SqlEditorTab {
                     let scopes = global_state
                         .apply_sql_cache_invalidation_plan(&cache, &connection_id, &pending)
                         .await;
-                    if let Some(notifier) = notifier {
-                        for (connection_id, database, schema) in scopes {
-                            let _ = cx.update(|cx| {
-                                notifier.0.update(cx, |_, cx| {
-                                    cx.emit(ConnectionDataEvent::SchemaChanged {
-                                        connection_id,
-                                        database,
-                                        schema,
-                                    });
-                                });
-                            });
-                        }
-                    }
+                    emit_invalidation_events(cx, notifier.as_ref(), &connection_id, scopes);
                 }
             }
 
@@ -4203,7 +4191,7 @@ impl SqlEditorTab {
                         let scopes = global_state
                             .apply_sql_cache_invalidation_plan(&cache, &connection_id, &plan)
                             .await;
-                        emit_schema_changed_events(cx, notifier.as_ref(), scopes);
+                        emit_invalidation_events(cx, notifier.as_ref(), &connection_id, scopes);
                     }
                 })
                 .detach();

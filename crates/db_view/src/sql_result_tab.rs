@@ -31,7 +31,7 @@ use crate::sidebar::execution_history_panel::ExecutionHistoryPanel;
 use crate::table_data::cell_preview_host::CellPreviewHost;
 use crate::table_data::data_grid::{DataGrid, DataGridConfig, DataGridUsage};
 use ai_chat_view::AskAiButton;
-use db::cache_manager::{GlobalNodeCache, SchemaInvalidationPlan};
+use db::cache_manager::{GlobalNodeCache, SchemaInvalidationPlan, SchemaInvalidationScope};
 use db::sql_editor::execution::SqlExecutionResultSource;
 use one_core::connection_notifier::{ConnectionDataEvent, GlobalConnectionNotifier};
 use one_core::gpui_tokio::Tokio;
@@ -125,25 +125,40 @@ pub(crate) enum SessionSchemaInvalidation {
     Deferred(Arc<Mutex<SchemaInvalidationPlan>>),
 }
 
-pub(crate) fn emit_schema_changed_events(
+/// 按失效范围分类发射连接通知事件。
+///
+/// 数据级范围（TRUNCATE / 无 WHERE 的整表 DELETE）发 `TableDataCleared`，
+/// 让打开的表数据网格重新拉取；结构级范围发 `SchemaChanged`，触发树/元数据
+/// 刷新。与非流式执行路径（`emit_invalidation_scope_event`）保持同一语义。
+pub(crate) fn emit_invalidation_events(
     cx: &mut AsyncApp,
     notifier: Option<&GlobalConnectionNotifier>,
-    scopes: Vec<(String, String, Option<String>)>,
+    connection_id: &str,
+    scopes: Vec<SchemaInvalidationScope>,
 ) {
     let Some(notifier) = notifier else {
         return;
     };
-    for (connection_id, database, schema) in scopes {
-        let _ = cx.update(|cx| {
-            notifier.0.update(cx, |_, cx| {
-                cx.emit(ConnectionDataEvent::SchemaChanged {
-                    connection_id,
-                    database,
-                    schema,
-                });
-            });
+    let _ = cx.update(|cx| {
+        notifier.0.update(cx, |_, cx| {
+            for scope in scopes {
+                if let (true, Some(table)) = (scope.data_only, scope.table.as_deref()) {
+                    cx.emit(ConnectionDataEvent::TableDataCleared {
+                        connection_id: connection_id.to_string(),
+                        database: scope.database.clone(),
+                        schema: scope.schema.clone(),
+                        table: table.to_string(),
+                    });
+                } else {
+                    cx.emit(ConnectionDataEvent::SchemaChanged {
+                        connection_id: connection_id.to_string(),
+                        database: scope.database.clone(),
+                        schema: scope.schema.clone(),
+                    });
+                }
+            }
         });
-    }
+    });
 }
 
 impl StatementListData {
@@ -730,7 +745,7 @@ impl SqlResultTabContainer {
                                 &plan,
                             )
                             .await;
-                        emit_schema_changed_events(cx, notifier.as_ref(), scopes);
+                        emit_invalidation_events(cx, notifier.as_ref(), &request.connection_id, scopes);
                     }
                     SessionSchemaInvalidation::Deferred(pending) => {
                         pending.lock().merge(plan);
