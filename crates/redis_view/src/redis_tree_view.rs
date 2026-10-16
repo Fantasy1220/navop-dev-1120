@@ -3673,12 +3673,25 @@ mod tests {
             })
         };
         wait_until(&mut cx, |cx| db2_done(cx));
+        // 等键类型补齐：zset 键的 Z 徽章异步出现（issue #416 崩溃场景）。
+        wait_until(&mut cx, |cx| {
+            tree.read_with(cx, |tree, _| {
+                let db2 = RedisTreeView::db_node_id("4201", 2);
+                let loaded = tree.count_loaded_keys(&db2);
+                let typed = tree
+                    .nodes
+                    .values()
+                    .filter(|n| matches!(n.node_type, RedisNodeType::Key(RedisKeyType::ZSet)))
+                    .count() as i64;
+                loaded > 0 && typed == loaded
+            })
+        });
         cx.run_until_parked();
         tree.read_with(&cx, |tree, _| {
             assert_eq!(
-                1,
+                2,
                 tree.count_loaded_keys(&RedisTreeView::db_node_id("4201", 2)),
-                "前置条件：db2 应加载出种子键"
+                "前置条件：db2 应加载出 2 个 zset 种子键"
             );
         });
 
