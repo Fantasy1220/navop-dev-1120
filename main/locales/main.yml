@@ -4285,6 +4285,22 @@ Settings:
       en: Toggle Vi Mode
       zh-CN: 切换 Vi 模式
       zh-HK: 切換 Vi 模式
+    terminal_scroll_line_up:
+      en: Scroll Up One Line
+      zh-CN: 向上滚动一行
+      zh-HK: 向上捲動一行
+    terminal_scroll_line_down:
+      en: Scroll Down One Line
+      zh-CN: 向下滚动一行
+      zh-HK: 向下捲動一行
+    terminal_scroll_page_up:
+      en: Scroll Up One Page
+      zh-CN: 向上滚动一屏
+      zh-HK: 向上捲動一頁
+    terminal_scroll_page_down:
+      en: Scroll Down One Page
+      zh-CN: 向下滚动一屏
+      zh-HK: 向下捲動一頁
     database_focus_search:
       en: Focus Search
       zh-CN: 聚焦搜索

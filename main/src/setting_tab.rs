@@ -3412,6 +3412,34 @@ const TERMINAL_SHORTCUTS: &[ShortcutEntry] = &[
         action_id: Some(action_id::TERMINAL_TOGGLE_VI_MODE),
         system_hotkey: false,
     },
+    ShortcutEntry {
+        keys_macos: &["ctrl-shift-up"],
+        keys_other: &["ctrl-shift-up"],
+        label_key: "Settings.Shortcuts.terminal_scroll_line_up",
+        action_id: Some(action_id::TERMINAL_SCROLL_LINE_UP),
+        system_hotkey: false,
+    },
+    ShortcutEntry {
+        keys_macos: &["ctrl-shift-down"],
+        keys_other: &["ctrl-shift-down"],
+        label_key: "Settings.Shortcuts.terminal_scroll_line_down",
+        action_id: Some(action_id::TERMINAL_SCROLL_LINE_DOWN),
+        system_hotkey: false,
+    },
+    ShortcutEntry {
+        keys_macos: &["shift-pageup"],
+        keys_other: &["shift-pageup"],
+        label_key: "Settings.Shortcuts.terminal_scroll_page_up",
+        action_id: Some(action_id::TERMINAL_SCROLL_PAGE_UP),
+        system_hotkey: false,
+    },
+    ShortcutEntry {
+        keys_macos: &["shift-pagedown"],
+        keys_other: &["shift-pagedown"],
+        label_key: "Settings.Shortcuts.terminal_scroll_page_down",
+        action_id: Some(action_id::TERMINAL_SCROLL_PAGE_DOWN),
+        system_hotkey: false,
+    },
 ];
 
 const DATABASE_SHORTCUTS: &[ShortcutEntry] = &[
