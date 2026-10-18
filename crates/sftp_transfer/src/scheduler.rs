@@ -8,7 +8,7 @@ use super::{SftpConnectionIdentity, SftpTransferId};
 /// `MaxSessions=10`，留出用户终端、目录浏览等其它 channel 的余量后取 3。
 /// 并发车道让一个卡住或慢速的任务不再拖死同服务器上的其它传输（此前
 /// 单车道下，一个停摆的任务会把后续所有任务卡在队列里）。
-pub(crate) const MAX_CONCURRENT_TRANSFERS_PER_CONNECTION: usize = 3;
+pub const MAX_CONCURRENT_TRANSFERS_PER_CONNECTION: usize = 3;
 
 #[derive(Default)]
 struct ConnectionLane {
