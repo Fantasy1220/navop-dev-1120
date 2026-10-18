@@ -1948,6 +1948,20 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn tls_config_builds_rediss_url_supported_by_client() {
+        let mut tls_config = config(RedisConnectionMode::Standalone, 0);
+        tls_config.use_tls = true;
+
+        let url = tls_config.to_url();
+        assert_eq!("rediss://127.0.0.1:6379/0", url);
+
+        // 故障面：redis 客户端未启用 TLS feature 时，`Client::open` 会直接返回
+        // `InvalidClientConfig("can't connect with TLS, the feature is not enabled")`，
+        // 表现为「无法创建 Redis 客户端」。
+        Client::open(url.as_str()).expect("启用 use_tls 时 redis 客户端必须支持 rediss://");
+    }
+
+    #[test]
     fn connection_config_for_db_rejects_non_zero_cluster_db() {
         let base = config(RedisConnectionMode::Cluster, 0);
 
