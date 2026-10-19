@@ -456,7 +456,7 @@ fn main() {
         tracing::warn!(%error, "failed to enqueue initial startup request");
     }
 
-    if !resolved_paths.is_portable()
+    if resolved_paths.uses_installed_directories()
         && let Err(error) = one_core::app_dirs::migrate_legacy_directories()
     {
         eprintln!("Failed to migrate legacy application directories: {error:#}");
@@ -498,7 +498,8 @@ fn main() {
             cx.quit();
             return;
         }
-        if !one_core::app_paths::is_portable() {
+        // 只有正式安装态才注册宿主文件关联；便携版与 debug 开发构建不应改写系统关联。
+        if one_core::app_paths::is_installed() {
             file_association::schedule_registration(cx);
         }
         notes::init(cx);
@@ -893,7 +894,7 @@ mod embedded_cli_removal_tests {
     fn portable_mode_does_not_register_host_file_associations() {
         let source = include_str!("main.rs");
 
-        assert!(source.contains("if !one_core::app_paths::is_portable()"));
+        assert!(source.contains("if one_core::app_paths::is_installed()"));
         assert!(source.contains("file_association::schedule_registration(cx)"));
     }
 
