@@ -30,6 +30,7 @@ redis-runtime.workspace = true
 
 [dev-dependencies]
 gpui = { workspace = true, features = ["test-support"] }
+redis_client = { workspace = true }
 
 [lints]
 workspace = true
