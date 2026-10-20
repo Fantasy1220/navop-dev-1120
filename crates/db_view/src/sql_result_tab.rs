@@ -964,6 +964,7 @@ impl SqlResultTabContainer {
                     );
                     this.set_sql_result_column_meta(query_result.column_meta.clone(), cx);
                     this.load_column_meta_for_sql_result(cx);
+                    this.load_sql_result_column_comments(cx);
                 });
 
                 if editable
