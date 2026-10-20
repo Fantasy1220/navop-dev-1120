@@ -4,6 +4,40 @@ Navop user-facing release notes. Generate and review each bilingual version entr
 
 <!-- NAVOP_RELEASES -->
 
+## [v0.20.4] - 2026-10-20
+
+#### 更新内容
+
+- 扩展连接新增「终端类型」：扩展只需在 `extension.json` 的 connection 贡献点里声明 `terminal`（command、args、env、title），不必再提供 provider 运行时，Navop 会直接用已保存的非敏感表单值解析模板并打开普通本地终端页签（例如 `tsh-ssh` 这类外部 CLI 工具，现在只要一个 `extension.json` 就够了）。出于安全考虑，模板参数若不以 `-` 开头，代入值也不允许以 `-` 开头，避免被同步或共享过来的连接数据注入命令行选项；空的可选参数与环境变量会被丢弃，控制字符一律拒绝。
+- 这类终端页签使用固定标题、支持复制，子进程退出后按回车即可重新启动。扩展连接表单对终端类型隐藏「测试」按钮。
+
+#### 修复与优化
+
+- Redis 集群：单键命令打到非所属 master 时自动按 `MOVED` 重定向到正确节点并重试一次（`GET` / `SET` / `DEL` / `EXPIRE` / `PERSIST` / `RENAME` / `HSET` / `HDEL` / `LPUSH` / `RPUSH` / `LSET` / `SADD` / `SREM` / `ZADD` / `ZREM` 以及键详情查看）。控制台里的原始命令仍保持直连，避免写命令被重放（#414 后续反馈）。
+- Redis：点刷新已加载的数据库不再闪退（#424）。行右侧的加载中 / 错误图标是条件插入的子元素，会让同排文本容器的布局序号漂移，导致布局测量缓存未命中并在预绘制阶段直接崩溃；现在这些容器使用稳定 ID。
+- 数据库：修复执行 SQL 成功后进程崩溃。缓存失效最终会走 `tokio::fs` 删目录，需要在 Tokio 运行时内轮询；此前它在前台任务里直接等待，release 构建（`panic = "abort"`）下只要有一条 DDL 成功就整进程退出。
+- 云同步：修复每次同步后连接总是掉回根目录、需要手动重新分组的问题。云端记录按更新时间倒序下发，连接常常先于所属分组落地而被写到根目录；收尾阶段新增连接层级对齐，在本地未被改动时把连接归位到云端所属分组。
+- 开发构建：debug 构建默认使用独立数据目录 `~/.navop-dev`，不再污染已安装的正式实例；`--data-dir`、`--portable`、`NAVOP_DATA_DIR`、`NAVOP_PORTABLE` 仍优先级更高。
+
+国内下载：如果 GitHub 下载较慢，可从 [CNB 镜像](https://cnb.cool/navop-dev/navop/-/releases/tag/v0.20.4) 下载桌面端安装包
+
+---
+
+#### What's New
+
+- Extension connections can now declare a terminal instead of a provider runtime: a connection contribution in `extension.json` may specify `terminal` (command, args, env, title), and Navop resolves the templates against the saved non-secret form values and opens a regular local terminal tab — external CLI tools such as `tsh-ssh` need nothing but an `extension.json`. As a safety guard, an argument whose template does not start with `-` is rejected when the substituted value does, so shared or synced connection data cannot inject command-line options; empty optional arguments and env entries are dropped, and control characters are rejected.
+- Those terminal tabs get a fixed tab title, can be duplicated, and restart on Enter after the child process exits. The connection form hides its Test button for terminal connections.
+
+#### Fixes and Improvements
+
+- Redis cluster: single-key commands sent to a master that does not own the key now follow the `MOVED` redirection to the right node and retry once (`GET` / `SET` / `DEL` / `EXPIRE` / `PERSIST` / `RENAME` / `HSET` / `HDEL` / `LPUSH` / `RPUSH` / `LSET` / `SADD` / `SREM` / `ZADD` / `ZREM`, plus key detail lookup). Raw commands typed in the console stay direct so write commands are never replayed (#414 follow-up).
+- Redis: refreshing a loaded database no longer crashes (#424). The conditionally inserted loading / error icons shifted the layout index of the sibling text containers, so the measurement cache missed and prepaint crashed; those containers now carry stable IDs.
+- Database: fixed a process crash after a successful SQL execution. Cache invalidation eventually removes directories through `tokio::fs`, which must be polled inside the Tokio runtime; it used to be awaited from the foreground task, so with release builds (`panic = "abort"`) a single successful DDL terminated the whole process.
+- Cloud sync: fixed connections falling back to the root folder after every sync, which forced a manual regroup. Cloud records arrive in reverse update order, so a connection often lands before its group exists and gets written to the root; the finalize pass now re-aligns connections to their cloud group whenever the local copy was untouched.
+- Development builds: debug builds now default to an isolated data directory (`~/.navop-dev`) instead of polluting an installed release instance; `--data-dir`, `--portable`, `NAVOP_DATA_DIR` and `NAVOP_PORTABLE` still take precedence.
+
+**Full Changelog**: https://github.com/feigeCode/navop/compare/v0.20.3...v0.20.4
+
 ## [v0.20.3] - 2026-10-19
 
 #### 更新内容
