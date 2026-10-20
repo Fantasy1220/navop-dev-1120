@@ -181,6 +181,8 @@ pub struct RedisConnectionImpl {
     config: RedisConnectionConfig,
     client: Option<Client>,
     db_connections: Arc<RwLock<HashMap<u8, ConnectionManager>>>,
+    /// 集群模式：按端点缓存的节点连接（MOVED 重试目标），与会话同生命周期。
+    cluster_conns: Arc<tokio::sync::Mutex<HashMap<(String, u16), ConnectionManager>>>,
     tunnel: Option<LocalPortForwardTunnel>,
     resolved_endpoint: Option<(String, u16)>,
 }
@@ -191,6 +193,7 @@ impl RedisConnectionImpl {
             config,
             client: None,
             db_connections: Arc::new(RwLock::new(HashMap::new())),
+            cluster_conns: Arc::new(tokio::sync::Mutex::new(HashMap::new())),
             tunnel: None,
             resolved_endpoint: None,
         }
@@ -639,6 +642,54 @@ impl RedisConnectionImpl {
         Some((host.to_string(), port.parse().ok()?))
     }
 
+    /// 集群模式通用 MOVED 重试：先用默认 db 连接执行 `op`，遇 MOVED 时解析
+    /// 目标节点，取/建该节点连接（按端点缓存）重试一次。非 MOVED 错误原样返回。
+    /// 所有面向单键命令的 `*_in_db` 入口都应过这层，避免逐方法打补丁。
+    async fn with_moved_retry<T, F>(&self, db: u8, mut op: F) -> Result<T, RedisError>
+    where
+        T: Send,
+        F: for<'c> FnMut(
+            &'c mut ConnectionManager,
+        ) -> futures::future::BoxFuture<'c, Result<T, RedisError>>,
+    {
+        let mut retried_endpoint: Option<(String, u16)> = None;
+        loop {
+            let conn = match &retried_endpoint {
+                None => self.get_db_conn(db).await?,
+                Some(endpoint) => self.cluster_node_conn(endpoint).await?,
+            };
+            let mut conn = conn;
+            match op(&mut conn).await {
+                Ok(value) => return Ok(value),
+                Err(err) => {
+                    let Some(target) = Self::moved_endpoint(&err) else {
+                        return Err(err);
+                    };
+                    if retried_endpoint.is_some() && Some(target.clone()) == retried_endpoint {
+                        // 已重试到目标节点仍 MOVED：拓扑变动中，不再循环。
+                        return Err(err);
+                    }
+                    retried_endpoint = Some(target);
+                }
+            }
+        }
+    }
+
+    /// 取/建集群节点连接（按端点缓存，与 cluster_conns 同生命周期）。
+    async fn cluster_node_conn(
+        &self,
+        endpoint: &(String, u16),
+    ) -> Result<ConnectionManager, RedisError> {
+        let mut cache = self.cluster_conns.lock().await;
+        if let Some(conn) = cache.get(endpoint) {
+            return Ok(conn.clone());
+        }
+        let (_, conn) =
+            Self::open_connection_for_endpoint(&self.config, 0, &endpoint.0, endpoint.1).await?;
+        cache.insert(endpoint.clone(), conn.clone());
+        Ok(conn)
+    }
+
     async fn key_type_with_conn(
         conn: &mut ConnectionManager,
         key: &str,
@@ -1043,22 +1094,29 @@ impl RedisConnection for RedisConnectionImpl {
         value: &str,
         ttl: Option<i64>,
     ) -> Result<(), RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        if let Some(ttl) = ttl {
-            conn.set_ex(key, value, ttl as u64).await.map_err(|e| {
-                RedisError::command_with_source(
-                    t!("RedisConnection.command_failed", command = "SETEX").to_string(),
-                    e,
-                )
+        let key = key.to_string();
+        let value = value.to_string();
+        self.with_moved_retry(db, move |conn| {
+            let (key, value) = (key.clone(), value.clone());
+            Box::pin(async move {
+                if let Some(ttl) = ttl {
+                    conn.set_ex(&key, &value, ttl as u64).await.map_err(|e| {
+                        RedisError::command_with_source(
+                            t!("RedisConnection.command_failed", command = "SETEX").to_string(),
+                            e,
+                        )
+                    })
+                } else {
+                    conn.set(&key, &value).await.map_err(|e| {
+                        RedisError::command_with_source(
+                            t!("RedisConnection.command_failed", command = "SET").to_string(),
+                            e,
+                        )
+                    })
+                }
             })
-        } else {
-            conn.set(key, value).await.map_err(|e| {
-                RedisError::command_with_source(
-                    t!("RedisConnection.command_failed", command = "SET").to_string(),
-                    e,
-                )
-            })
-        }
+        })
+        .await
     }
 
     async fn del(&self, keys: &[&str]) -> Result<i64, RedisError> {
@@ -1355,14 +1413,20 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn expire_in_db(&self, db: u8, key: &str, seconds: i64) -> Result<bool, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        let result: i64 = conn.expire(key, seconds).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "EXPIRE").to_string(),
-                e,
-            )
-        })?;
-        Ok(result == 1)
+        let key = key.to_string();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            Box::pin(async move {
+                let result: i64 = conn.expire(&key, seconds).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "EXPIRE").to_string(),
+                        e,
+                    )
+                })?;
+                Ok(result == 1)
+            })
+        })
+        .await
     }
 
     async fn persist(&self, key: &str) -> Result<bool, RedisError> {
@@ -1370,14 +1434,20 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn persist_in_db(&self, db: u8, key: &str) -> Result<bool, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        let result: i64 = conn.persist(key).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "PERSIST").to_string(),
-                e,
-            )
-        })?;
-        Ok(result == 1)
+        let key = key.to_string();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            Box::pin(async move {
+                let result: i64 = conn.persist(&key).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "PERSIST").to_string(),
+                        e,
+                    )
+                })?;
+                Ok(result == 1)
+            })
+        })
+        .await
     }
 
     async fn rename(&self, old_key: &str, new_key: &str) -> Result<(), RedisError> {
@@ -1386,13 +1456,21 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn rename_in_db(&self, db: u8, old_key: &str, new_key: &str) -> Result<(), RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.rename(old_key, new_key).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "RENAME").to_string(),
-                e,
-            )
+        let old_key = old_key.to_string();
+        let new_key = new_key.to_string();
+        self.with_moved_retry(db, move |conn| {
+            let old_key = old_key.clone();
+            let new_key = new_key.clone();
+            Box::pin(async move {
+                conn.rename(&old_key, &new_key).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "RENAME").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn hset(&self, key: &str, field: &str, value: &str) -> Result<(), RedisError> {
@@ -1407,13 +1485,21 @@ impl RedisConnection for RedisConnectionImpl {
         field: &str,
         value: &str,
     ) -> Result<(), RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.hset(key, field, value).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "HSET").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let field = field.to_string();
+        let value = value.to_string();
+        self.with_moved_retry(db, move |conn| {
+            let (key, field, value) = (key.clone(), field.clone(), value.clone());
+            Box::pin(async move {
+                conn.hset(&key, &field, &value).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "HSET").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn hdel(&self, key: &str, fields: &[&str]) -> Result<i64, RedisError> {
@@ -1421,13 +1507,22 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn hdel_in_db(&self, db: u8, key: &str, fields: &[&str]) -> Result<i64, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.hdel(key, fields).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "HDEL").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let fields: Vec<String> = fields.iter().map(|s| s.to_string()).collect();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            let fields = fields.clone();
+            Box::pin(async move {
+                let refs: Vec<&str> = fields.iter().map(String::as_str).collect();
+                conn.hdel(&key, refs.as_slice()).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "HDEL").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn hlen(&self, key: &str) -> Result<i64, RedisError> {
@@ -1457,13 +1552,22 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn lpush_in_db(&self, db: u8, key: &str, values: &[&str]) -> Result<i64, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.lpush(key, values).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "LPUSH").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let values: Vec<String> = values.iter().map(|s| s.to_string()).collect();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            let values = values.clone();
+            Box::pin(async move {
+                let refs: Vec<&str> = values.iter().map(String::as_str).collect();
+                conn.lpush(&key, refs.as_slice()).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "LPUSH").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn rpush(&self, key: &str, values: &[&str]) -> Result<i64, RedisError> {
@@ -1471,13 +1575,22 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn rpush_in_db(&self, db: u8, key: &str, values: &[&str]) -> Result<i64, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.rpush(key, values).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "RPUSH").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let values: Vec<String> = values.iter().map(|s| s.to_string()).collect();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            let values = values.clone();
+            Box::pin(async move {
+                let refs: Vec<&str> = values.iter().map(String::as_str).collect();
+                conn.rpush(&key, refs.as_slice()).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "RPUSH").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn lset(&self, key: &str, index: i64, value: &str) -> Result<(), RedisError> {
@@ -1492,13 +1605,20 @@ impl RedisConnection for RedisConnectionImpl {
         index: i64,
         value: &str,
     ) -> Result<(), RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.lset(key, index as isize, value).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "LSET").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let value = value.to_string();
+        self.with_moved_retry(db, move |conn| {
+            let (key, value) = (key.clone(), value.clone());
+            Box::pin(async move {
+                conn.lset(&key, index as isize, &value).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "LSET").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn llen(&self, key: &str) -> Result<i64, RedisError> {
@@ -1516,13 +1636,22 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn sadd_in_db(&self, db: u8, key: &str, members: &[&str]) -> Result<i64, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.sadd(key, members).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "SADD").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let members: Vec<String> = members.iter().map(|s| s.to_string()).collect();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            let members = members.clone();
+            Box::pin(async move {
+                let refs: Vec<&str> = members.iter().map(String::as_str).collect();
+                conn.sadd(&key, refs.as_slice()).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "SADD").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn srem(&self, key: &str, members: &[&str]) -> Result<i64, RedisError> {
@@ -1530,13 +1659,22 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn srem_in_db(&self, db: u8, key: &str, members: &[&str]) -> Result<i64, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.srem(key, members).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "SREM").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let members: Vec<String> = members.iter().map(|s| s.to_string()).collect();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            let members = members.clone();
+            Box::pin(async move {
+                let refs: Vec<&str> = members.iter().map(String::as_str).collect();
+                conn.srem(&key, refs.as_slice()).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "SREM").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn scard(&self, key: &str) -> Result<i64, RedisError> {
@@ -1581,14 +1719,24 @@ impl RedisConnection for RedisConnectionImpl {
         key: &str,
         members: &[(f64, &str)],
     ) -> Result<i64, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        let items: Vec<(f64, &str)> = members.iter().map(|(s, m)| (*s, *m)).collect();
-        conn.zadd_multiple(key, &items).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "ZADD").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let members: Vec<(f64, String)> =
+            members.iter().map(|(s, m)| (*s, m.to_string())).collect();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            let members = members.clone();
+            Box::pin(async move {
+                let items: Vec<(f64, &str)> =
+                    members.iter().map(|(s, m)| (*s, m.as_str())).collect();
+                conn.zadd_multiple(&key, &items).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "ZADD").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn zrem(&self, key: &str, members: &[&str]) -> Result<i64, RedisError> {
@@ -1596,13 +1744,22 @@ impl RedisConnection for RedisConnectionImpl {
     }
 
     async fn zrem_in_db(&self, db: u8, key: &str, members: &[&str]) -> Result<i64, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        conn.zrem(key, members).await.map_err(|e| {
-            RedisError::command_with_source(
-                t!("RedisConnection.command_failed", command = "ZREM").to_string(),
-                e,
-            )
+        let key = key.to_string();
+        let members: Vec<String> = members.iter().map(|s| s.to_string()).collect();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            let members = members.clone();
+            Box::pin(async move {
+                let refs: Vec<&str> = members.iter().map(String::as_str).collect();
+                conn.zrem(&key, refs.as_slice()).await.map_err(|e| {
+                    RedisError::command_with_source(
+                        t!("RedisConnection.command_failed", command = "ZREM").to_string(),
+                        e,
+                    )
+                })
+            })
         })
+        .await
     }
 
     async fn zcard(&self, key: &str) -> Result<i64, RedisError> {
@@ -1745,15 +1902,13 @@ impl RedisConnection for RedisConnectionImpl {
         db: u8,
         key: &str,
     ) -> Result<KeyValueDetail, RedisError> {
-        let mut conn = self.get_db_conn(db).await?;
-        match Self::key_value_detail_with_conn(&mut conn, key).await {
-            Ok(detail) => Ok(detail),
-            Err(err) if Self::should_reconnect_after_redis_error(&err) => {
-                let mut conn = self.reconnect_db_conn(db).await?;
-                Self::key_value_detail_with_conn(&mut conn, key).await
-            }
-            Err(err) => Err(err),
-        }
+        // 集群模式：单键命令会命中任意节点，MOVED 重试到所属 master。
+        let key = key.to_string();
+        self.with_moved_retry(db, move |conn| {
+            let key = key.clone();
+            Box::pin(async move { Self::key_value_detail_with_conn(conn, &key).await })
+        })
+        .await
     }
 
     async fn get_databases_info(&self) -> Result<Vec<RedisDatabaseInfo>, RedisError> {
@@ -2207,6 +2362,60 @@ pub(crate) mod tests {
         // db 计数汇总
         let dbs = conn.get_databases_info().await.expect("cluster dbinfo");
         assert_eq!(total, dbs.first().map(|d| d.keys).unwrap_or(0));
+    }
+
+    /// 集群 MOVED 重试（issue #414 后续反馈）：单键命令打到非所属 master 时
+    /// 应自动重定向。用 seed:moved 前缀（若存在）或动态写入键验证。
+    #[tokio::test]
+    async fn cluster_moved_retry_redirects_single_key_ops() {
+        let reachable = tokio::net::TcpStream::connect("127.0.0.1:7001")
+            .await
+            .is_ok();
+        if !reachable {
+            return; // 本机无测试集群，跳过
+        }
+
+        let mut cfg = config(RedisConnectionMode::Cluster, 0);
+        cfg.port = 7001;
+        cfg.cluster_nodes = vec![
+            "127.0.0.1:7001".to_string(),
+            "127.0.0.1:7002".to_string(),
+            "127.0.0.1:7003".to_string(),
+        ];
+        let mut conn = RedisConnectionImpl::new(cfg);
+        conn.connect().await.expect("connect cluster");
+
+        // 扫出全部键，找出至少一个不在 7001（所连入口）上的键。
+        // 单节点视角：直接问 7001 有哪些键，再找出不在其中的。
+        let scan = conn.scan_in_db(0, 0, "*", 500).await.expect("cluster scan");
+        assert!(!scan.keys.is_empty(), "集群应有键");
+
+        let mut node_cfg = config(RedisConnectionMode::Standalone, 0);
+        node_cfg.port = 7001;
+        let mut node1 = RedisConnectionImpl::new(node_cfg);
+        node1.connect().await.expect("connect 7001");
+        let own = node1.scan_in_db(0, 0, "*", 500).await.expect("node scan");
+        let on_7001: std::collections::HashSet<String> = own.keys.into_iter().collect();
+
+        // 选一个不在入口节点上的键，直连它必然 MOVED → 重试到正确 master。
+        let foreign = scan
+            .keys
+            .iter()
+            .find(|k| !on_7001.contains(*k))
+            .expect("至少一个键不在入口节点（否则测试无意义，多写几个键再跑）");
+
+        let detail = conn
+            .get_key_value_detail_in_db(0, foreign)
+            .await
+            .expect("MOVED 重试后应拿到值详情");
+        assert_eq!(detail.key_info.name, *foreign);
+
+        // EXPIRE 同样应跨节点生效
+        let expired = conn
+            .expire_in_db(0, foreign, 3600)
+            .await
+            .expect("expire moved");
+        assert!(expired, "EXPIRE 应在正确 master 上生效");
     }
 }
 

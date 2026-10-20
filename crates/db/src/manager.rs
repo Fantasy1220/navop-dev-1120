@@ -1537,6 +1537,36 @@ impl GlobalDbState {
             .await
     }
 
+    /// 在应用 Tokio 运行时上应用失效计划。
+    ///
+    /// 失效计划会删除文件缓存（`tokio::fs::remove_dir_all` / `remove_file`），
+    /// 而 `tokio::fs` 内部依赖 `spawn_blocking` → `Handle::current()`，必须在
+    /// Tokio 运行时上下文内轮询。GPUI 前台 executor（`cx.spawn`）没有运行时
+    /// 上下文，直接 await 会 panic；release 下 `panic = "abort"` 会直接崩溃进程。
+    pub async fn apply_sql_cache_invalidation_plan_on_runtime(
+        &self,
+        cx: &mut AsyncApp,
+        cache: GlobalNodeCache,
+        connection_id: String,
+        plan: SchemaInvalidationPlan,
+    ) -> Vec<SchemaInvalidationScope> {
+        let state = self.clone();
+        let applied = Tokio::spawn_result(cx, async move {
+            Ok(state
+                .apply_sql_cache_invalidation_plan(&cache, &connection_id, &plan)
+                .await)
+        })
+        .await;
+
+        match applied {
+            Ok(scopes) => scopes,
+            Err(error) => {
+                error!(?error, "Failed to apply SQL cache invalidation plan");
+                Vec::new()
+            }
+        }
+    }
+
     /// Invalidate metadata for SQL executed on a caller-owned session.
     ///
     /// Session-bound execution cannot use `execute_with_session_internal` because

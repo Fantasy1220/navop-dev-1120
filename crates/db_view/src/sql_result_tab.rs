@@ -738,11 +738,14 @@ impl SqlResultTabContainer {
                 }
                 match &request.schema_invalidation {
                     SessionSchemaInvalidation::Immediate => {
+                        // 缓存失效会删除文件缓存（tokio::fs），必须在应用 Tokio
+                        // 运行时上轮询；前台 executor 没有运行时上下文会 panic。
                         let scopes = global_state
-                            .apply_sql_cache_invalidation_plan(
-                                &cache,
-                                &request.connection_id,
-                                &plan,
+                            .apply_sql_cache_invalidation_plan_on_runtime(
+                                cx,
+                                cache.clone(),
+                                request.connection_id.clone(),
+                                plan,
                             )
                             .await;
                         emit_invalidation_events(cx, notifier.as_ref(), &request.connection_id, scopes);
