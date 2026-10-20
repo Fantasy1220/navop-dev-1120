@@ -3881,20 +3881,25 @@ impl Render for TableOptionsEditor {
 mod tests {
     use super::*;
     use db::{
-        clickhouse::ClickHousePlugin, mssql::MsSqlPlugin, mysql::MySqlPlugin, oracle::OraclePlugin,
-        plugin::DatabasePlugin, postgresql::PostgresPlugin, sqlite::SqlitePlugin,
+        mssql::MsSqlPlugin, mysql::MySqlPlugin, oracle::OraclePlugin, plugin::DatabasePlugin,
+        postgresql::PostgresPlugin, sqlite::SqlitePlugin,
     };
     use gpui_component::{Theme, ThemeColor};
     use std::{cell::Cell, rc::Rc};
 
     /// 表设计器 DDL 断言仅覆盖仍带原生插件的数据库类型。
     ///
-    /// TDengine 原生插件已移除(改由 tdengine IPC 外部驱动提供,DDL 行为由扩展侧覆盖),
-    /// 因此 `DatabaseType::TDengine` 与 `External` 一同排除在本组测试之外。
+    /// ClickHouse/TDengine 原生插件已移除(分别改由对应 IPC 外部驱动提供,
+    /// DDL 行为由扩展侧覆盖),因此这两类与 `External` 一同排除在本组测试之外。
     fn design_test_database_types() -> Vec<DatabaseType> {
         DatabaseType::all()
             .into_iter()
-            .filter(|database_type| !matches!(database_type, DatabaseType::TDengine))
+            .filter(|database_type| {
+                !matches!(
+                    database_type,
+                    DatabaseType::ClickHouse | DatabaseType::TDengine
+                )
+            })
             .cloned()
             .collect()
     }
@@ -3992,9 +3997,10 @@ mod tests {
             DatabaseType::DuckDB => Box::new(ExternalDatabasePlugin::new()),
             DatabaseType::MSSQL => Box::new(MsSqlPlugin::new()),
             DatabaseType::Oracle => Box::new(OraclePlugin::new()),
-            DatabaseType::ClickHouse => Box::new(ClickHousePlugin::new()),
-            DatabaseType::TDengine | DatabaseType::External { .. } => {
-                unreachable!("TDengine/External 无原生插件,表设计器 DDL 断言已过滤该类型",)
+            DatabaseType::ClickHouse | DatabaseType::TDengine | DatabaseType::External { .. } => {
+                unreachable!(
+                    "ClickHouse/TDengine/External 无原生插件,表设计器 DDL 断言已过滤该类型",
+                )
             }
         }
     }
@@ -4235,7 +4241,10 @@ mod tests {
         );
 
         assert!(design.columns[0].is_primary_key, "id must be primary");
-        assert!(!design.columns[1].is_primary_key, "amount must not be primary");
+        assert!(
+            !design.columns[1].is_primary_key,
+            "amount must not be primary"
+        );
         // 精度随 raw_type 走解析链，不能丢。
         assert_eq!(design.columns[0].length, Some(10));
         assert_eq!(design.columns[1].length, Some(10));
@@ -4334,13 +4343,6 @@ mod tests {
         let plugin = OraclePlugin::new();
         let sql = plugin.build_column_rename_sql("users", "b", "a", None);
         assert!(sql.contains("RENAME COLUMN \"b\" TO \"a\""));
-    }
-
-    #[test]
-    fn test_clickhouse_rename_sql_uses_rename_column() {
-        let plugin = ClickHousePlugin::new();
-        let sql = plugin.build_column_rename_sql("users", "b", "a", None);
-        assert!(sql.contains("RENAME COLUMN `b` TO `a`"));
     }
 
     #[test]

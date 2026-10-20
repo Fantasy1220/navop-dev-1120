@@ -256,6 +256,8 @@ impl DatabaseType {
             // TDengine 自 v0.16 起由 tdengine IPC 驱动扩展提供,统一走外部驱动路径
             // (连接表单/打开守卫/树菜单/IPC 协议均据此路由到驱动扩展)
             Self::TDengine => Some("tdengine"),
+            // ClickHouse 同样改由 clickhouse IPC 驱动扩展提供,历史内置连接照此路由
+            Self::ClickHouse => Some("clickhouse"),
             _ => None,
         }
     }
@@ -2876,6 +2878,16 @@ mod tests {
         );
         assert!(DatabaseType::TDengine.is_external() == false);
         assert_eq!(None, DatabaseType::MySQL.external_driver_id());
+    }
+
+    #[test]
+    fn clickhouse_routes_to_external_driver() {
+        assert_eq!(
+            Some("clickhouse"),
+            DatabaseType::ClickHouse.external_driver_id()
+        );
+        assert!(!DatabaseType::ClickHouse.is_external());
+        assert_eq!(None, DatabaseType::PostgreSQL.external_driver_id());
     }
 
     fn ssh_connection_with_id(id: i64, auth_method: SshAuthMethod) -> StoredConnection {

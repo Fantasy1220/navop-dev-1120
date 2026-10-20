@@ -30,7 +30,6 @@ pub mod streaming_parser;
 pub mod types;
 
 // Database implementations
-pub mod clickhouse;
 #[cfg(feature = "builtin-duckdb")]
 pub mod duckdb;
 mod max_rows;

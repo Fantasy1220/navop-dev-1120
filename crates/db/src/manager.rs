@@ -2,7 +2,6 @@ use crate::cache::CacheContext;
 use crate::cache_manager::{
     GlobalNodeCache, SchemaInvalidationPlan, SchemaInvalidationScope, SqlInvalidationContext,
 };
-use crate::clickhouse::ClickHousePlugin;
 use crate::connection::{DbConnection, DbError, StreamingProgress};
 use crate::connection_config_resolver::ConnectionConfigResolver;
 #[cfg(feature = "builtin-duckdb")]
@@ -166,13 +165,16 @@ async fn cached_foreign_keys(
 /// `get_plugin` 中路由到同一外部驱动解析路径。
 const TDENGINE_IPC_DRIVER_ID: &str = "tdengine";
 
+/// ClickHouse 同样经外部 IPC 驱动(driver_id "clickhouse")提供实现,
+/// 历史内置连接在 `get_plugin` 中按同一路径解析。
+const CLICKHOUSE_IPC_DRIVER_ID: &str = "clickhouse";
+
 /// Database manager - creates database plugins
 pub struct DbManager {
     mysql: Arc<dyn DatabasePlugin>,
     postgresql: Arc<dyn DatabasePlugin>,
     sqlite: Arc<dyn DatabasePlugin>,
     duckdb: Arc<dyn DatabasePlugin>,
-    clickhouse: Arc<dyn DatabasePlugin>,
     mssql: Arc<dyn DatabasePlugin>,
     oracle: Arc<dyn DatabasePlugin>,
     external_drivers: HashMap<String, Arc<dyn DatabasePlugin>>,
@@ -209,7 +211,6 @@ impl DbManager {
             postgresql: Arc::new(PostgresPlugin::new()),
             sqlite: Arc::new(SqlitePlugin::new()),
             duckdb: default_duckdb_plugin(&registry),
-            clickhouse: Arc::new(ClickHousePlugin::new()),
             mssql: Arc::new(MsSqlPlugin::new()),
             oracle: Arc::new(OraclePlugin::new()),
             external_drivers,
@@ -223,7 +224,8 @@ impl DbManager {
             DatabaseType::PostgreSQL => Ok(Arc::clone(&self.postgresql)),
             DatabaseType::SQLite => Ok(Arc::clone(&self.sqlite)),
             DatabaseType::DuckDB => Ok(Arc::clone(&self.duckdb)),
-            DatabaseType::ClickHouse => Ok(Arc::clone(&self.clickhouse)),
+            // ClickHouse 无原生插件,与 External 一致按 driver_id 解析 IPC 外部驱动。
+            DatabaseType::ClickHouse => self.resolve_external_plugin(CLICKHOUSE_IPC_DRIVER_ID),
             // TDengine 无原生插件,与 External 一致按 driver_id 解析 IPC 外部驱动。
             DatabaseType::TDengine => self.resolve_external_plugin(TDENGINE_IPC_DRIVER_ID),
             DatabaseType::MSSQL => Ok(Arc::clone(&self.mssql)),
@@ -274,7 +276,6 @@ impl Clone for DbManager {
             postgresql: Arc::clone(&self.postgresql),
             sqlite: Arc::clone(&self.sqlite),
             duckdb: Arc::clone(&self.duckdb),
-            clickhouse: Arc::clone(&self.clickhouse),
             mssql: Arc::clone(&self.mssql),
             oracle: Arc::clone(&self.oracle),
             external_drivers: self.external_drivers.clone(),
