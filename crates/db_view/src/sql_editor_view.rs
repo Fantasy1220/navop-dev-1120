@@ -4077,7 +4077,12 @@ impl SqlEditorTab {
                 let pending = std::mem::take(&mut *session.pending_invalidation.lock());
                 if let Some(cache) = cache {
                     let scopes = global_state
-                        .apply_sql_cache_invalidation_plan(&cache, &connection_id, &pending)
+                        .apply_sql_cache_invalidation_plan_on_runtime(
+                            cx,
+                            cache,
+                            connection_id.clone(),
+                            pending,
+                        )
                         .await;
                     emit_invalidation_events(cx, notifier.as_ref(), &connection_id, scopes);
                 }
@@ -4189,7 +4194,12 @@ impl SqlEditorTab {
                             schema.as_deref(),
                         );
                         let scopes = global_state
-                            .apply_sql_cache_invalidation_plan(&cache, &connection_id, &plan)
+                            .apply_sql_cache_invalidation_plan_on_runtime(
+                                cx,
+                                cache,
+                                connection_id.clone(),
+                                plan,
+                            )
                             .await;
                         emit_invalidation_events(cx, notifier.as_ref(), &connection_id, scopes);
                     }
