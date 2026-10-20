@@ -11416,7 +11416,6 @@ dependencies = [
  "one-core",
  "one-ui",
  "palette",
- "redis",
  "redis-runtime",
  "rust-i18n",
  "serde",

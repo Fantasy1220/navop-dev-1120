@@ -2994,6 +2994,7 @@ mod tests {
     use super::*;
     use gpui::{AppContext, TestAppContext, VisualTestContext, WindowOptions};
     use gpui_component::Root;
+    use redis_runtime::RedisConnection;
     use std::cell::RefCell;
     use std::rc::Rc;
 
@@ -3854,27 +3855,23 @@ mod tests {
         cx.run_until_parked();
     }
 
-    /// 种子 db4：两个字符串键（幂等）。
+    /// 种子 db4：两个字符串键（幂等）。用 redis-runtime 自己的连接实现，
+    /// 避免 redis_view 直接依赖 redis_client（main 的 SDK 可选性契约测试禁止）。
     fn seeding_db4_with_two_keys() {
+        let mut config = crate::RedisConnectionConfig::default();
+        config.host = "127.0.0.1".to_string();
+        config.port = 16379;
+        config.timeout = 3;
         let runtime = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
             .expect("seed runtime");
         let _ = runtime.block_on(async {
-            let client =
-                redis_client::Client::open("redis://127.0.0.1:16379/4").expect("seed client");
-            let mut conn = client.get_connection_manager().await?;
-            let _: () = redis_client::cmd("SET")
-                .arg("refresh:seed:a")
-                .arg("1")
-                .query_async(&mut conn)
-                .await?;
-            let _: () = redis_client::cmd("SET")
-                .arg("refresh:seed:b")
-                .arg("2")
-                .query_async(&mut conn)
-                .await?;
-            Ok::<(), redis_client::RedisError>(())
+            let mut conn = crate::RedisConnectionImpl::new(config);
+            conn.connect().await?;
+            conn.set_in_db(4, "refresh:seed:a", "1", None).await?;
+            conn.set_in_db(4, "refresh:seed:b", "2", None).await?;
+            Ok::<(), crate::RedisError>(())
         });
     }
 }
