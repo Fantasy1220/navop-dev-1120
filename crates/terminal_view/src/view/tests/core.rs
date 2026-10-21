@@ -113,6 +113,7 @@ fn tab_duplicate_requires_a_live_local_ssh_or_serial_terminal() {
     let launched_source = TerminalDuplicateSource::Launched {
         config: LocalConfig::default(),
         title: "root@db-1".to_string(),
+        icon: None,
     };
     assert!(terminal_tab_duplicate_supported(
         Some(&launched_source),
@@ -194,11 +195,17 @@ fn duplicate_source_for_launched_terminal_keeps_declared_launch_parameters() {
         TerminalDuplicateSource::Launched {
             config,
             title: "root@db-1".to_string(),
+            icon: None,
         },
         Some("/tmp/current"),
     );
 
-    let TerminalDuplicateSource::Launched { config, title } = source else {
+    let TerminalDuplicateSource::Launched {
+        config,
+        title,
+        icon: _,
+    } = source
+    else {
         panic!("expected launched duplicate source");
     };
     assert_eq!("root@db-1", title);
