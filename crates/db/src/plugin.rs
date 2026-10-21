@@ -14,6 +14,7 @@ use crate::plugin_manifest::{
     DatabaseCapabilities, DatabaseUiCapabilities, DatabaseUiManifest, FormSelectOption,
     ReferenceDataKind,
 };
+use crate::result_column_lineage::ResultColumnLineage;
 use crate::streaming_parser::StreamingSqlParser;
 use crate::types::*;
 use anyhow::{Error, Result, anyhow, bail};
@@ -632,6 +633,12 @@ pub trait DatabasePlugin: Send + Sync {
             table_name,
             schema_metadata_safe: false,
         }
+    }
+
+    /// Analyze result-column lineage so callers can enrich column comments
+    /// after executing a SELECT query.
+    fn analyze_result_column_lineage(&self, sql: &str) -> Option<ResultColumnLineage> {
+        crate::result_column_lineage::analyze_sql_lineage(self.sql_dialect().as_ref(), sql)
     }
 
     /// Check if a SELECT query might be editable.
