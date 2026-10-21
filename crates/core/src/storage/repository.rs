@@ -825,13 +825,28 @@ impl Repository for WorkspaceRepository {
     fn delete(&self, id: i64) -> Result<()> {
         self.conn.with_connection(|conn| {
             let transaction = conn.unchecked_transaction()?;
+            // 删除分组时把子分组和直属连接「提升一层」到被删分组的父级；
+            // 直接置 NULL 会让它们在连接树里跳到根级或随分组一起消失。
+            let Some(parent_id) = transaction
+                .query_row(
+                    "SELECT parent_id FROM workspaces WHERE id = ?1",
+                    params![id],
+                    |row| row.get::<_, Option<i64>>(0),
+                )
+                .optional()?
+            else {
+                return Ok(());
+            };
+            let ts = now();
+            // 提升属于真实的本地归属变更，需要刷新 updated_at 让云同步把它当作
+            // 待上传修改，否则下载端会把连接/子分组重新指回已删除的分组。
             transaction.execute(
-                "UPDATE connections SET workspace_id = NULL WHERE workspace_id = ?1",
-                params![id],
+                "UPDATE workspaces SET parent_id = ?1, updated_at = ?2 WHERE parent_id = ?3",
+                params![parent_id, ts, id],
             )?;
             transaction.execute(
-                "UPDATE workspaces SET parent_id = NULL WHERE parent_id = ?1",
-                params![id],
+                "UPDATE connections SET workspace_id = ?1, updated_at = ?2 WHERE workspace_id = ?3",
+                params![parent_id, ts, id],
             )?;
             transaction.execute("DELETE FROM workspaces WHERE id = ?1", params![id])?;
             transaction.commit()?;
@@ -1153,6 +1168,63 @@ mod tests {
         repo.delete(parent_id).unwrap();
 
         assert_eq!(None, repo.get(child_id).unwrap().unwrap().parent_id);
+    }
+
+    #[test]
+    fn workspace_delete_promotes_children_and_connections_one_level() {
+        let (conn, connections) = test_repository();
+        let repo = WorkspaceRepository::new(conn);
+        let mut root = workspace("root");
+        let root_id = repo.insert(&mut root).unwrap();
+        let mut middle = workspace("middle");
+        middle.parent_id = Some(root_id);
+        let middle_id = repo.insert(&mut middle).unwrap();
+        let mut leaf = workspace("leaf");
+        leaf.parent_id = Some(middle_id);
+        let leaf_id = repo.insert(&mut leaf).unwrap();
+
+        let mut direct = ssh_connection("direct");
+        direct.workspace_id = Some(middle_id);
+        let direct_id = connections.insert(&mut direct).unwrap();
+        let mut nested = ssh_connection("nested");
+        nested.workspace_id = Some(leaf_id);
+        let nested_id = connections.insert(&mut nested).unwrap();
+
+        repo.delete(middle_id).unwrap();
+
+        assert!(repo.get(middle_id).unwrap().is_none());
+        assert_eq!(Some(root_id), repo.get(leaf_id).unwrap().unwrap().parent_id);
+        assert_eq!(
+            Some(root_id),
+            connections.get(direct_id).unwrap().unwrap().workspace_id
+        );
+        assert_eq!(
+            Some(leaf_id),
+            connections.get(nested_id).unwrap().unwrap().workspace_id
+        );
+    }
+
+    #[test]
+    fn workspace_delete_of_root_detaches_children_and_connections() {
+        let (conn, connections) = test_repository();
+        let repo = WorkspaceRepository::new(conn);
+        let mut root = workspace("root");
+        let root_id = repo.insert(&mut root).unwrap();
+        let mut child = workspace("child");
+        child.parent_id = Some(root_id);
+        let child_id = repo.insert(&mut child).unwrap();
+
+        let mut attached = ssh_connection("attached");
+        attached.workspace_id = Some(root_id);
+        let attached_id = connections.insert(&mut attached).unwrap();
+
+        repo.delete(root_id).unwrap();
+
+        assert_eq!(None, repo.get(child_id).unwrap().unwrap().parent_id);
+        assert_eq!(
+            None,
+            connections.get(attached_id).unwrap().unwrap().workspace_id
+        );
     }
 
     #[test]

@@ -131,6 +131,7 @@ mod tests {
                 id: 1,
                 parent_id: None,
                 name: "生产环境".to_string(),
+                sort_order: None,
             }];
             let mut tree_connections = vec![ConnectionNodeInput {
                 id: 50,

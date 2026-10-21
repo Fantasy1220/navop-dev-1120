@@ -3630,6 +3630,44 @@ impl SqlEditorTab {
                 return;
             }
 
+            // 粘性会话是跨语句复用的同一条物理连接：执行语句本身不会重放
+            // `SET search_path`，所以建会话后必须先把 schema 对齐到编辑器当前
+            // 选择，否则未限定表名的查询永远落在服务端默认 schema（通常是
+            // public）——issue #433。
+            if let Err(error) =
+                Self::prepare_auto_session(&global_state, &session_id, scope.schema.as_deref(), cx)
+                    .await
+            {
+                if let Err(close_error) = global_state.close_session(cx, session_id).await {
+                    error!("Failed to close unprepared auto session: {:?}", close_error);
+                }
+                let is_current = entity
+                    .update(cx, |this, cx| {
+                        this.sql_result_tab_container.update(cx, |container, cx| {
+                            container.end_run_pending(pending_run, cx);
+                        });
+                        if transaction_generation.load(Ordering::SeqCst) != generation
+                            || context_generation_guard.load(Ordering::SeqCst) != context_generation
+                            || !this.auto_session_starting
+                        {
+                            return false;
+                        }
+                        this.auto_session_starting = false;
+                        this.finalize_execution_marker(SqlGutterMarkerState::Failed, cx);
+                        cx.notify();
+                        true
+                    })
+                    .unwrap_or(false);
+                if is_current {
+                    Self::notify_async(
+                        cx,
+                        t!("Query.auto_session_start_failed", error = error.to_string())
+                            .to_string(),
+                    );
+                }
+                return;
+            }
+
             let installed = entity
                 .update(cx, |this, cx| {
                     if transaction_generation.load(Ordering::SeqCst) != generation
@@ -3956,6 +3994,33 @@ impl SqlEditorTab {
             }
         })
         .detach();
+    }
+
+    /// 建好粘性会话后先把服务端 schema 对齐到编辑器当前选择。
+    ///
+    /// 粘性会话复用的是同一条物理连接，`SET search_path` 之类的会话级设置会
+    /// 一直保留；而 `execute_session` 只发 SQL 本身，不会重放 schema 切换。
+    /// 因此这里不切 schema，未限定表名的查询就会落在服务端默认 schema（通常
+    /// 是 public），与下拉框选中的 schema 无关——issue #433。
+    ///
+    /// 只切一次而不是每条语句都切：用户手动 `SET search_path` 后应能继续按自己
+    /// 的设定执行，切换 schema 走的是丢弃会话重建（见 `auto_session_action_for`）。
+    async fn prepare_auto_session(
+        global_state: &GlobalDbState,
+        session_id: &str,
+        schema: Option<&str>,
+        cx: &mut AsyncApp,
+    ) -> anyhow::Result<()> {
+        let Some(schema) = schema.map(str::to_string) else {
+            // 该驱动不区分 schema（如 MySQL / SQLite），无需切换。
+            return Ok(());
+        };
+        let global_state = global_state.clone();
+        let session_id = session_id.to_string();
+        Tokio::spawn_result(cx, async move {
+            global_state.switch_session_schema(session_id, schema).await
+        })
+        .await
     }
 
     async fn prepare_manual_transaction_session(
@@ -5861,11 +5926,61 @@ mod tests {
         }
 
         assert_eq!(
-            7,
+            8,
             production
                 .matches("container.end_run_pending(pending_run, cx)")
                 .count(),
-            "建会话失败/过期/未安装共 7 个分支都要收尾运行指示"
+            "建会话失败/过期/未安装/未对齐 schema 共 8 个分支都要收尾运行指示"
+        );
+    }
+
+    /// issue #433：Auto 粘性会话复用同一条物理连接，`execute_session` 不会重放
+    /// `SET search_path`。两条建会话路径都必须在执行 SQL 之前把 schema 对齐到
+    /// 编辑器当前选择，否则未限定表名的查询会一直落在服务端默认 schema。
+    #[test]
+    fn session_start_aligns_schema_before_running_sql() {
+        let source = include_str!("sql_editor_view.rs");
+        let production = source.split("#[cfg(test)]\nmod tests {").next().unwrap();
+
+        for (entry, prepare_call, run_call) in [
+            (
+                "fn start_auto_session_and_run",
+                "Self::prepare_auto_session(",
+                "Self::run_session_sql(",
+            ),
+            (
+                "fn start_manual_transaction_and_run",
+                "Self::prepare_manual_transaction_session(",
+                "this.run_manual_sql_on_session(",
+            ),
+        ] {
+            let body = production
+                .split(entry)
+                .nth(1)
+                .unwrap_or_else(|| panic!("{entry} 必须存在"))
+                .split("\n    fn ")
+                .next()
+                .unwrap();
+            let prepare_at = body
+                .find(prepare_call)
+                .unwrap_or_else(|| panic!("{entry} 建会话后必须对齐 schema"));
+            let run_at = body
+                .find(run_call)
+                .unwrap_or_else(|| panic!("{entry} 必须执行 SQL"));
+            assert!(prepare_at < run_at, "{entry} 必须先对齐 schema 再执行 SQL");
+        }
+
+        // 对齐动作本身必须真的切 schema，而不是只留一个空壳准备步骤。
+        let helper = production
+            .split("async fn prepare_auto_session(")
+            .nth(1)
+            .expect("prepare_auto_session 必须存在")
+            .split("\n    async fn ")
+            .next()
+            .unwrap();
+        assert!(
+            helper.contains("switch_session_schema("),
+            "prepare_auto_session 必须切换会话 schema"
         );
     }
 
