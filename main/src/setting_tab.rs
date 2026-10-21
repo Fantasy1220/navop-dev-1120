@@ -8,6 +8,7 @@ use crate::license::{get_license_service, is_feature_enabled, offline_license_pu
 use crate::settings::agent_settings::agent_setting_group;
 use crate::settings::appearance::render as render_appearance_settings;
 use crate::settings::database_settings::database_setting_group;
+use crate::settings::connection_display_settings::connection_display_setting_group;
 use crate::settings::llm_providers_view::LlmProvidersView;
 use crate::settings::local_terminal_settings::local_terminal_setting_group;
 use crate::settings::mcp_settings::mcp_setting_group;
@@ -939,6 +940,7 @@ impl SettingsPanel {
                             .description(t!("Settings.General.Log.file_path_desc").to_string()),
                         ),
                     remote_file_editor_setting_group(&default_settings.remote_file_editor, cx),
+                    connection_display_setting_group(),
                     SettingGroup::new()
                         .title(t!("Settings.General.Proxy.group_title"))
                         .item(
