@@ -373,6 +373,7 @@ team_id
 | `Checkbox` | boolean | 默认值必须为 `true` 或 `false` |
 | `FilePath` | string | 本地文件路径；宿主提供文本输入 + 浏览按钮 |
 | `Auth` | object | 用户名 + 密码 + 钥匙串引用复合组件；选中钥匙串引用后隐藏手动账号密码。手动模式产出 `config[id] = {"username": "..."}` 且密码进入 secrets（键 `{id}.password`）；引用模式产出 `config[id] = {"credential_reference": {...}}`。打开/测试连接时宿主会把引用解析为运行时明文（与数据库 driver.json 同一凭据解析机制），解析结果不落盘 |
+| `Icon` | object | 连接图标选择器，与 SSH 连接一致：自动 / 内置图标平铺 / 本地图片。选择内置图标产出 `config[id] = {"icon": "<ID>"}`，本地图片产出 `config[id] = {"file": "<绝对路径>"}`（路径优先）；保持「自动」时不写该键，宿主回退到连接声明的 `icon` |
 
 规则：
 
@@ -386,6 +387,8 @@ team_id
 - 多条 `visibleWhen` 按 AND 处理。
 - 编辑连接时，secret 留空表示保留；点击 Clear 表示明确删除。
 - `Auth` 与 `FilePath` 不得声明 `secret: true`；`Auth` 依赖钥匙串引用与手动输入，不应声明 `defaultValue`/`options`。
+- `Icon` 每个连接至多声明一个；不得声明 `secret: true`、`defaultValue` 或 `options`，也不参与必填校验。内置图标 ID 见宿主 `SSH_ICON_IDS`（`ubuntu`、`debian`、`centos`、`cisco`、`windows` 等）。本地图片路径只在本机有效，不随云同步 / 团队共享带到其他机器。
+- 终端型连接中 `Icon` 字段可以正常使用，但它不会被 `terminal` 模板引用，只影响图标。
 
 ### 6.4 shellViewId
 

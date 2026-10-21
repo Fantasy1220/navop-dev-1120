@@ -11,19 +11,27 @@ impl TerminalView {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        Self::new_local_view(config, tab_index, None, window, cx)
+        Self::new_local_view(config, tab_index, None, None, window, cx)
     }
 
-    /// 扩展声明的终端型连接使用的本地终端:带固定标签标题,
+    /// 扩展声明的终端型连接使用的本地终端:带固定标签标题和连接设置里选的图标,
     /// 子进程退出后可按 Enter 重启,复制标签会按同样的参数重新拉起。
     pub fn new_launched(
         config: LocalConfig,
         title: String,
+        connection_icon: Option<Icon>,
         tab_index: Option<usize>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        Self::new_local_view(config, tab_index, Some(title), window, cx)
+        Self::new_local_view(
+            config,
+            tab_index,
+            Some(title),
+            connection_icon,
+            window,
+            cx,
+        )
     }
 
     /// `title` 为 `Some` 表示扩展声明的终端型连接:固定标题且可重启。
@@ -31,6 +39,7 @@ impl TerminalView {
         config: LocalConfig,
         tab_index: Option<usize>,
         title: Option<String>,
+        connection_icon: Option<Icon>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
@@ -39,6 +48,7 @@ impl TerminalView {
             Some(title) => TerminalDuplicateSource::Launched {
                 config: config.clone(),
                 title: title.clone(),
+                icon: connection_icon.clone(),
             },
             None => TerminalDuplicateSource::Local(config.clone()),
         };
@@ -62,6 +72,7 @@ impl TerminalView {
                 terminal,
                 connection_id: None,
                 stored_connection: None,
+                connection_icon,
                 sync_path_enabled: true,
                 local_working_dir,
                 workspace_source,
@@ -114,6 +125,7 @@ impl TerminalView {
                 terminal,
                 connection_id,
                 stored_connection: Some(stored_conn),
+                connection_icon: None,
                 sync_path_enabled: sync_path_with_terminal,
                 local_working_dir: None,
                 workspace_source: None,
@@ -141,6 +153,7 @@ impl TerminalView {
                 terminal,
                 connection_id: None,
                 stored_connection: None,
+                connection_icon: None,
                 sync_path_enabled: false,
                 local_working_dir: None,
                 workspace_source: None,
@@ -168,6 +181,7 @@ impl TerminalView {
                 terminal,
                 connection_id: None,
                 stored_connection: None,
+                connection_icon: None,
                 sync_path_enabled: false,
                 local_working_dir: None,
                 workspace_source: None,
@@ -200,6 +214,7 @@ impl TerminalView {
                 terminal,
                 connection_id,
                 stored_connection: None,
+                connection_icon: None,
                 sync_path_enabled: true,
                 local_working_dir: None,
                 workspace_source: None,
@@ -232,6 +247,7 @@ impl TerminalView {
                 terminal,
                 connection_id,
                 stored_connection: None,
+                connection_icon: None,
                 sync_path_enabled: true,
                 local_working_dir: None,
                 workspace_source: None,

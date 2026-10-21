@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use gpui::{App, AppContext as _, Context, Entity, Subscription, Window};
+use gpui_component::Icon;
 use one_core::storage::models::StoredConnection;
 use terminal::LocalConfig;
 use terminal::terminal::TerminalConnectionKind;
@@ -53,16 +54,18 @@ impl TerminalWorkspace {
         Self::from_pane(main, window, cx)
     }
 
-    /// 扩展声明的终端型连接:固定标题、退出后可重启的本地进程。
+    /// 扩展声明的终端型连接:固定标题、连接图标、退出后可重启的本地进程。
     pub fn new_launched(
         config: LocalConfig,
         title: String,
+        connection_icon: Option<Icon>,
         tab_index: Option<usize>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
         let main = cx.new(|cx| {
-            TerminalView::new_launched(config, title, tab_index, window, cx).with_workspace_pane()
+            TerminalView::new_launched(config, title, connection_icon, tab_index, window, cx)
+                .with_workspace_pane()
         });
         Self::from_pane(main, window, cx)
     }

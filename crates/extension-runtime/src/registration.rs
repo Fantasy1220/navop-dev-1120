@@ -191,6 +191,7 @@ fn validate_connection_form(
 ) -> Result<(), ExtensionRuntimeError> {
     const RESERVED_FIELDS: &[&str] = &["name", "workspace", "remark", "sync_enabled", "team_id"];
     let mut fields = HashSet::new();
+    let mut icon_fields = 0;
     let mut tabs = HashSet::new();
     for tab in &connection.form.tabs {
         if tab.id.trim().is_empty() || tab.label.trim().is_empty() || !tabs.insert(tab.id.clone()) {
@@ -217,6 +218,12 @@ fn validate_connection_form(
             return invalid_connection(format!("secret field `{}` must use Password", field.id));
         }
         validate_field_options(field)?;
+        if field.field_type == crate::extension::manifest::ResourceConnectionFieldType::Icon {
+            icon_fields += 1;
+            if icon_fields > 1 {
+                return invalid_connection("a connection can declare at most one icon field");
+            }
+        }
         if field.field_type == crate::extension::manifest::ResourceConnectionFieldType::Password
             && !field.secret
         {
@@ -298,6 +305,14 @@ fn validate_field_options(
             {
                 return invalid_connection(format!(
                     "checkbox field `{}` has an invalid default value",
+                    field.id
+                ));
+            }
+        }
+        ResourceConnectionFieldType::Icon => {
+            if field.default_value.is_some() || !field.options.is_empty() {
+                return invalid_connection(format!(
+                    "icon field `{}` cannot declare a default value or options",
                     field.id
                 ));
             }

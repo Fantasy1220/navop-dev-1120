@@ -231,10 +231,23 @@ fn open_extension_terminal_connection(
         .filter(|tab| tab.id().starts_with(&prefix))
         .count();
     let tab_index = (existing > 0).then_some(existing + 1);
+    // 标签图标与「打开连接」列表走同一个解析:用户选择 → manifest 图标 → 通用扩展图标。
+    // 终端型连接打开的是本地终端,没有 `StoredConnection`,图标必须在这里解析后传进去。
+    let connection_icon = Some(universal_plugins::extension_connection_icon_or_default(
+        &connection,
+        Some(contribution),
+    ));
     // 与其他终端标签一致:把创建与容器更新移出 HomePage 租约。
     window.defer(cx, move |window, cx| {
         let view = cx.new(|cx| {
-            terminal_view::TerminalWorkspace::new_launched(config, title, tab_index, window, cx)
+            terminal_view::TerminalWorkspace::new_launched(
+                config,
+                title,
+                connection_icon,
+                tab_index,
+                window,
+                cx,
+            )
         });
         tabs.update(cx, |tabs, cx| {
             let tab = TabItem::new(tab_id, "terminal", view);

@@ -99,6 +99,11 @@ pub enum ResourceConnectionFieldType {
     /// 收集产物:`config[id] = {"credential_reference": {...}}` 或 `{"username": "..."}`,
     /// 手动密码进入 secrets,键为 `{id}.password`。无需 `secret: true`。
     Auth,
+    /// 连接图标选择器(自动 / 内置图标 / 本地图片),与 SSH 连接一致。
+    /// 收集产物:`config[id] = {"icon": "<内置图标 ID>"}` 或 `{"file": "<本地图片路径>"}`,
+    /// 保持「自动」时不写入。每个连接至多声明一个;不能 `secret`、不能有 `defaultValue` / `options`。
+    /// 宿主在首页 / 列表中据此渲染该连接的图标(未选择时回退到 `icon` 声明的扩展图标)。
+    Icon,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]

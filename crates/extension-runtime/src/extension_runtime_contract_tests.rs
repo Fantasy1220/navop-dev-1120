@@ -279,6 +279,69 @@ fn runtime_catalog_registers_terminal_connection_without_provider_runtime() {
 }
 
 #[test]
+fn runtime_catalog_accepts_single_icon_field() {
+    let mut manifest = shell_manifest();
+    let mut connection = resource_connection();
+    connection.shell_view_id = None;
+    connection.form.tabs[0].fields.push(icon_field());
+    manifest.contributes.connections.push(connection);
+
+    ExtensionRuntimeCatalog::from_manifests(vec![manifest]).expect("one icon field is allowed");
+}
+
+#[test]
+fn runtime_catalog_rejects_second_icon_field_and_icon_options() {
+    let mut manifest = shell_manifest();
+    let mut connection = resource_connection();
+    connection.shell_view_id = None;
+    connection.form.tabs[0].fields.push(icon_field());
+    let mut duplicate = icon_field();
+    duplicate.id = "icon2".into();
+    connection.form.tabs[0].fields.push(duplicate);
+    manifest.contributes.connections.push(connection);
+    let error = ExtensionRuntimeCatalog::from_manifests(vec![manifest]).unwrap_err();
+    assert!(
+        error.to_string().contains("at most one icon field"),
+        "{error}"
+    );
+
+    let mut manifest = shell_manifest();
+    let mut connection = resource_connection();
+    connection.shell_view_id = None;
+    let mut field = icon_field();
+    field
+        .options
+        .push(crate::extension::manifest::ResourceConnectionSelectOption {
+            value: "a".into(),
+            label: "A".into(),
+        });
+    connection.form.tabs[0].fields.push(field);
+    manifest.contributes.connections.push(connection);
+    let error = ExtensionRuntimeCatalog::from_manifests(vec![manifest]).unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("cannot declare a default value or options"),
+        "{error}"
+    );
+}
+
+fn icon_field() -> ResourceConnectionFormField {
+    ResourceConnectionFormField {
+        id: "icon".into(),
+        label: "Icon".into(),
+        field_type: ResourceConnectionFieldType::Icon,
+        required: false,
+        default_value: None,
+        placeholder: None,
+        secret: false,
+        options: Vec::new(),
+        visible_when: Vec::new(),
+        rows: None,
+    }
+}
+
+#[test]
 fn runtime_catalog_rejects_terminal_connection_with_provider_fields() {
     for mutate in [
         (|c: &mut ResourceConnectionContrib| c.runtime_id = "provider".into()) as fn(&mut _),

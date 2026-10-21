@@ -51,6 +51,8 @@ pub(crate) enum TerminalDuplicateSource {
     Launched {
         config: LocalConfig,
         title: String,
+        /// 连接设置里选的图标;复制标签时一并带上。
+        icon: Option<Icon>,
     },
     Ssh {
         connection: StoredConnection,
