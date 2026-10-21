@@ -132,6 +132,11 @@ impl QueuedPromptPreview {
 
 const CONTEXT_POPOVER_WIDTH: f32 = 400.0;
 const CONTEXT_TARGET_LIST_MAX_HEIGHT: f32 = 320.0;
+
+/// 模型下拉超过该数量才显示搜索框(少量选项直接浏览更快)。
+const MODEL_MENU_SEARCH_MIN_OPTIONS: usize = 15;
+/// 模型下拉列表最大高度(超出内部滚动),与上下文面板列表一致。
+const MODEL_MENU_LIST_MAX_HEIGHT: f32 = 320.0;
 const CONTEXT_KIND_MAX_WIDTH: f32 = 92.0;
 const COMPOSER_EDITOR_MIN_ROWS: usize = 3;
 const COMPOSER_EDITOR_MAX_ROWS: usize = 10;
@@ -245,6 +250,10 @@ pub struct AgentInput {
     target_options: Vec<ComposerTarget>,
     /// 模型下拉选项(上层注入)。
     model_options: Vec<ComposerModelOption>,
+    /// 模型下拉的搜索框(选项多时显示,过滤 provider/model/hint)。
+    model_search_input: Entity<InputState>,
+    /// 打开模型下拉时置位,下次 render 时据此清空搜索框(需 &mut Window)。
+    model_search_needs_reset: bool,
     /// 工具执行模式下拉选项(上层注入)。
     execution_mode_options: Vec<ComposerMenuOption>,
     /// 上下文面板的目标搜索框(与顶部输入框分离,避免抢焦点 / 拦截回车提交)。
@@ -382,6 +391,24 @@ impl AgentInput {
             },
         );
 
+        // 模型下拉搜索框:与上下文面板搜索框同款,独立实体避免抢主输入框焦点。
+        let model_search_input = cx.new(|cx| {
+            InputState::new(window, cx)
+                .placeholder(t!("AgentUi.search_models").to_string())
+                .clean_on_escape()
+        });
+        let model_search_sub = cx.subscribe_in(
+            &model_search_input,
+            window,
+            |_this: &mut Self,
+             _input: &Entity<InputState>,
+             _event: &InputEvent,
+             _window,
+             cx: &mut Context<Self>| {
+                cx.notify();
+            },
+        );
+
         Self {
             focus_handle: cx.focus_handle(),
             input_state,
@@ -399,12 +426,20 @@ impl AgentInput {
             context_search_query: SharedString::default(),
             selected_resource_kind_filter: SharedString::from("all"),
             context_search_needs_reset: false,
+            model_search_input,
+            model_search_needs_reset: false,
             open_menu: None,
             expanded_plan_items: HashSet::new(),
             top_capabilities_collapsed: false,
             theme: None,
             edge_to_edge: false,
-            _subscriptions: vec![enter_sub, paste_sub, history_sub, context_search_sub],
+            _subscriptions: vec![
+                enter_sub,
+                paste_sub,
+                history_sub,
+                context_search_sub,
+                model_search_sub,
+            ],
         }
     }
 
@@ -948,6 +983,8 @@ impl AgentInput {
                         } else {
                             None
                         };
+                        // 打开时清空上次搜索,关闭时也复位,避免残留过滤态。
+                        this.model_search_needs_reset = true;
                         cx.notify();
                     });
                 }
@@ -956,6 +993,8 @@ impl AgentInput {
             .content({
                 let view = view.clone();
                 let theme = theme.clone();
+                let search_input = self.model_search_input.clone();
+                let search_query = self.model_search_input.read(cx).text().to_string();
                 move |_state, _window, cx| {
                     let muted = theme.muted_foreground;
                     let hover_bg = theme.hover_background();
@@ -963,22 +1002,64 @@ impl AgentInput {
                     let mut col = v_flex()
                         .p_1()
                         .gap(px(2.0))
-                        .min_w(px(240.0))
+                        .min_w(px(280.0))
                         .bg(theme.background)
                         .text_color(theme.foreground);
-                    for opt in &options {
+
+                    // 选项多时显示搜索框:固定在列表上方,不随列表滚动。
+                    if options.len() > MODEL_MENU_SEARCH_MIN_OPTIONS {
+                        col = col.child(
+                            div()
+                                .debug_selector(|| "agent-model-search".to_string())
+                                .w_full()
+                                .min_w_0()
+                                .px_1()
+                                .pb_1()
+                                .child(
+                                    Input::new(&search_input)
+                                        .prefix(Icon::new(IconName::Search).text_color(muted))
+                                        .cleanable(true)
+                                        .small()
+                                        .w_full(),
+                                ),
+                        );
+                    }
+
+                    let visible = filter_model_options(&options, &search_query);
+                    if visible.is_empty() {
+                        col = col.child(
+                            div()
+                                .px_2()
+                                .py_2()
+                                .text_sm()
+                                .text_color(muted)
+                                .child(t!("AgentUi.no_matching_models").to_string()),
+                        );
+                        return col;
+                    }
+
+                    let mut list = v_flex()
+                        .id("agent-model-list")
+                        .w_full()
+                        .px_1()
+                        .pb_1()
+                        .gap(px(2.0))
+                        .max_h(px(MODEL_MENU_LIST_MAX_HEIGHT))
+                        .overflow_x_hidden()
+                        .overflow_y_scroll();
+                    for opt in visible {
                         let view = view.clone();
                         let id = opt.id.clone();
                         let provider_id = opt.provider_id.clone();
                         let model = opt.model.clone();
                         let mut inner = v_flex()
                             .gap(px(1.0))
-                            .child(div().text_sm().child(opt.display_label()));
+                            .child(div().text_sm().truncate().child(opt.display_label()));
                         if let Some(hint) = &opt.hint {
                             inner =
                                 inner.child(div().text_xs().text_color(muted).child(hint.clone()));
                         }
-                        col = col.child(
+                        list = list.child(
                             h_flex()
                                 .id(SharedString::from(format!("agent-model-opt-{id}")))
                                 .w_full()
@@ -1007,7 +1088,7 @@ impl AgentInput {
                                 }),
                         );
                     }
-                    col
+                    col.child(list)
                 }
             })
     }
@@ -2163,6 +2244,32 @@ fn resource_pool_badge(
         .child(label)
 }
 
+/// 模型选项是否匹配搜索关键字(provider / model / hint 子串,忽略大小写)。
+fn model_option_matches(opt: &ComposerModelOption, needle: &str) -> bool {
+    opt.provider_label.to_lowercase().contains(needle)
+        || opt.model.to_lowercase().contains(needle)
+        || opt
+            .hint
+            .as_ref()
+            .is_some_and(|hint| hint.to_lowercase().contains(needle))
+}
+
+/// 过滤并排序模型选项:空关键字原样返回(保持上层注入顺序);
+/// 否则保留匹配项,并把 model 名以关键字开头的排前面。
+fn filter_model_options(options: &[ComposerModelOption], query: &str) -> Vec<ComposerModelOption> {
+    let needle = query.trim().to_lowercase();
+    if needle.is_empty() {
+        return options.to_vec();
+    }
+    let mut matched: Vec<ComposerModelOption> = options
+        .iter()
+        .filter(|opt| model_option_matches(opt, &needle))
+        .cloned()
+        .collect();
+    matched.sort_by_key(|opt| !opt.model.to_lowercase().starts_with(&needle));
+    matched
+}
+
 /// 目标是否匹配搜索关键字(子串匹配,忽略大小写)。
 fn target_matches(opt: &ComposerTarget, needle: &str) -> bool {
     let needle = normalize_target_search_query(needle);
@@ -2410,6 +2517,13 @@ impl Render for AgentInput {
             });
             self.context_search_query = SharedString::default();
             self.context_search_needs_reset = false;
+        }
+        // 打开模型下拉时同样在 render 时清空搜索框,避免残留上次过滤。
+        if self.model_search_needs_reset {
+            self.model_search_input.update(cx, |state, cx| {
+                state.set_value("", _window, cx);
+            });
+            self.model_search_needs_reset = false;
         }
         let context_bar = self.render_context_bar(cx);
         let attachments = self.render_attachments(cx);
@@ -2691,6 +2805,64 @@ mod tests {
             queue.origin.x + queue.size.width <= stop.origin.x,
             "queue and stop controls must not overlap: queue={queue:?}, stop={stop:?}"
         );
+    }
+
+    #[test]
+    fn model_option_search_matches_provider_model_and_hint() {
+        let opt = |provider: &str, model: &str, hint: Option<&str>| {
+            let option = ComposerModelOption::new("id", "prov-id", provider, model);
+            match hint {
+                Some(hint) => option.with_hint(hint),
+                None => option,
+            }
+        };
+
+        // model 名子串命中(忽略大小写)。
+        assert!(model_option_matches(
+            &opt("OpenRouter", "deepseek/deepseek-chat-v3", None),
+            "deepseek"
+        ));
+        // provider 名子串命中。
+        assert!(model_option_matches(
+            &opt("OpenRouter", "qwen/qwen-3-coder", None),
+            "openrouter"
+        ));
+        // hint 子串命中(模型列表的辅助说明也能搜到)。
+        assert!(model_option_matches(
+            &opt("OpenRouter", "qwen/qwen-3-coder", Some("免费 128k 上下文")),
+            "128k"
+        ));
+        // 不匹配返回 false。
+        assert!(!model_option_matches(
+            &opt("OpenRouter", "qwen/qwen-3-coder", None),
+            "claude"
+        ));
+    }
+
+    #[test]
+    fn filter_model_options_ranks_model_prefix_first_and_keeps_order_without_query() {
+        let deepseek =
+            ComposerModelOption::new("id-1", "prov", "OpenRouter", "deepseek/deepseek-chat-v3");
+        let qwen_prefix =
+            ComposerModelOption::new("id-2", "prov", "OpenRouter", "deepseek/deepseek-r1");
+        let contains = ComposerModelOption::new("id-3", "prov", "OpenAI", "gpt-4o-deepseek-ish");
+
+        // 空关键字:原样返回,保持上层注入顺序。
+        let all = filter_model_options(&[deepseek.clone(), qwen_prefix.clone()], "  ");
+        assert_eq!(all.len(), 2);
+
+        // 有关键字:model 名以关键字开头的排前面,其余按原相对顺序跟随。
+        let filtered = filter_model_options(
+            &[contains.clone(), deepseek.clone(), qwen_prefix.clone()],
+            "deepseek",
+        );
+        assert_eq!(filtered.len(), 3);
+        assert_eq!(filtered[0].id, "id-1");
+        assert_eq!(filtered[1].id, "id-2");
+        assert_eq!(filtered[2].id, "id-3");
+
+        // 无匹配返回空列表(渲染层显示「未匹配到模型」)。
+        assert!(filter_model_options(&[contains], "claude/").is_empty());
     }
 
     #[test]

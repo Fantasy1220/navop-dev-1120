@@ -475,6 +475,10 @@ AgentUi:
     en: No matching resources
     zh-CN: 未匹配到资源
     zh-HK: 找不到符合的資源
+  no_matching_models:
+    en: No matching models
+    zh-CN: 未匹配到模型
+    zh-HK: 找不到符合的模型
   no_model_config:
     en: No model configuration is available
     zh-CN: 没有可用模型配置
@@ -639,6 +643,10 @@ AgentUi:
     en: Scope
     zh-CN: 作用域
     zh-HK: 作用域
+  search_models:
+    en: Search models…
+    zh-CN: 搜索模型…
+    zh-HK: 搜尋模型…
   search_targets:
     en: Search targets…
     zh-CN: 搜索目标…
