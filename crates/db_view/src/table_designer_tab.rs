@@ -2,16 +2,16 @@ use crate::search_shortcut::{DB_SEARCH_CONTEXT, FocusSearchInput, focus_search_i
 use futures::channel::oneshot;
 use gpui::prelude::*;
 use gpui::{
-    AnyElement, App, AsyncApp, Context, Div, DragMoveEvent, Entity, EntityId, EventEmitter,
-    FocusHandle, Focusable, Hsla, InteractiveElement, IntoElement, ListSizingBehavior, MouseButton,
-    ParentElement, Pixels, Render, SharedString, Stateful, StatefulInteractiveElement, Styled,
-    Subscription, Task, UniformListScrollHandle, Window, div, px, uniform_list,
+    AnyElement, App, AsyncApp, ClipboardItem, Context, Div, DragMoveEvent, Entity, EntityId,
+    EventEmitter, FocusHandle, Focusable, Hsla, InteractiveElement, IntoElement,
+    ListSizingBehavior, MouseButton, ParentElement, Pixels, Render, SharedString, Stateful,
+    StatefulInteractiveElement, Styled, Subscription, Task, UniformListScrollHandle, Window, div,
+    px, uniform_list,
 };
 use gpui_component::{
-    ActiveTheme, Icon, IndexPath, Sizable, Size, Theme, WindowExt,
+    ActiveTheme, Disableable, Icon, IndexPath, Sizable, Size, Theme, WindowExt,
     button::{Button, ButtonVariants},
     checkbox::Checkbox,
-    clipboard::Clipboard,
     dialog::{DialogButtonProps, DialogFooter},
     form::{field, h_form},
     h_flex,
@@ -350,6 +350,11 @@ pub(crate) fn find_loaded_table_info(
 
 fn column_order_snapshot(design: &TableDesign) -> Vec<&str> {
     design.columns.iter().map(|col| col.name.as_str()).collect()
+}
+
+/// 复制预览页签内容的载荷：空白内容返回 `None`，避免把空串写进剪贴板。
+fn preview_sql_to_copy(sql: &str) -> Option<ClipboardItem> {
+    (!sql.trim().is_empty()).then(|| ClipboardItem::new_string(sql.to_string()))
 }
 
 pub struct TableDesigner {
@@ -1683,20 +1688,26 @@ impl TableDesigner {
             .size_full()
             .p_4()
             .gap_3()
-            .when(self.sql_preview_loading, |this| {
-                this.child(
-                    h_flex()
-                        .gap_2()
-                        .items_center()
-                        .child(Spinner::new().with_size(Size::Small))
-                        .child(
+            .child(
+                h_flex()
+                    .w_full()
+                    .items_center()
+                    .gap_2()
+                    .when(self.sql_preview_loading, |this| {
+                        this.child(Spinner::new().with_size(Size::Small)).child(
                             div()
                                 .text_sm()
                                 .text_color(cx.theme().muted_foreground)
                                 .child(t!("Table.generating_sql_preview").to_string()),
-                        ),
-                )
-            })
+                        )
+                    })
+                    .child(div().flex_1())
+                    .child(self.render_copy_action(
+                        SQL_PREVIEW_COPY_SELECTOR,
+                        &self.sql_preview_input,
+                        cx,
+                    )),
+            )
             .child(
                 Editor::new(&self.sql_preview_input)
                     .size_full()
@@ -1706,8 +1717,6 @@ impl TableDesigner {
     }
 
     fn render_ddl_preview(&self, cx: &Context<Self>) -> AnyElement {
-        let ddl_sql = self.ddl_preview_input.read(cx).text().to_string();
-
         v_flex()
             .size_full()
             .p_4()
@@ -1716,7 +1725,11 @@ impl TableDesigner {
                 h_flex()
                     .w_full()
                     .justify_end()
-                    .child(Clipboard::new("table-designer-copy-ddl").value(ddl_sql)),
+                    .child(self.render_copy_action(
+                        DDL_PREVIEW_COPY_SELECTOR,
+                        &self.ddl_preview_input,
+                        cx,
+                    )),
             )
             .child(
                 Editor::new(&self.ddl_preview_input)
@@ -1724,6 +1737,52 @@ impl TableDesigner {
                     .disabled(true),
             )
             .into_any_element()
+    }
+
+    /// 预览类页签的复制入口。
+    ///
+    /// 这些页签的编辑器是禁用态，不能像普通编辑器那样选中复制，所以各自给一个
+    /// 显式按钮；没有可复制的 SQL 时置灰，避免复制出空内容。
+    fn render_copy_action(
+        &self,
+        selector: &'static str,
+        source: &Entity<EditorState>,
+        cx: &Context<Self>,
+    ) -> AnyElement {
+        let source = source.clone();
+        let can_copy = !source.read(cx).text().to_string().trim().is_empty();
+
+        div()
+            .debug_selector(move || selector.to_owned())
+            .child(
+                Button::new(selector)
+                    .small()
+                    .ghost()
+                    .icon(IconName::Copy)
+                    .label(t!("Query.copy_sql").to_string())
+                    .tooltip(t!("Query.copy_sql").to_string())
+                    .disabled(!can_copy)
+                    .on_click(cx.listener(move |this, _, window, cx| {
+                        this.copy_preview_sql(&source, window, cx);
+                    })),
+            )
+            .into_any_element()
+    }
+
+    /// 把预览页签里生成好的 SQL 写进剪贴板并给出提示；空内容不写。
+    fn copy_preview_sql(
+        &self,
+        source: &Entity<EditorState>,
+        window: &mut Window,
+        cx: &mut Context<Self>,
+    ) {
+        let sql = source.read(cx).text().to_string();
+        let Some(item) = preview_sql_to_copy(&sql) else {
+            return;
+        };
+
+        cx.write_to_clipboard(item);
+        window.push_notification(t!("Query.sql_copied").to_string(), cx);
     }
 }
 
@@ -1748,6 +1807,11 @@ impl Render for TableDesigner {
             ))
     }
 }
+
+/// SQL 预览页签复制按钮的调试选择器（供回归测试定位该按钮）。
+const SQL_PREVIEW_COPY_SELECTOR: &str = "table-designer-copy-sql-preview";
+/// DDL 页签复制按钮的调试选择器（供回归测试定位该按钮）。
+const DDL_PREVIEW_COPY_SELECTOR: &str = "table-designer-copy-ddl";
 
 /// 表结构加载面板的调试选择器（供回归测试定位该面板）。
 const STRUCTURE_LOADING_SELECTOR: &str = "table-designer-structure-loading";
@@ -5836,6 +5900,58 @@ mod tests {
             width_after > width_before + px(DESIGNER_WIDENED_AT_LEAST),
             "从分隔线左侧拖动也应把第 0 列拖宽约 {DESIGNER_DRAG_DISTANCE}px：{width_before:?} → {width_after:?}"
         );
+    }
+
+    /// 空白预览内容不进剪贴板，否则复制出来的是一串空气。
+    #[test]
+    fn blank_preview_sql_is_not_offered_for_copy() {
+        assert_eq!(None, preview_sql_to_copy(""));
+        assert_eq!(None, preview_sql_to_copy("  \n\t"));
+    }
+
+    /// 复制载荷必须与生成出来的 SQL 逐字一致（缩进和换行都不能动）。
+    #[test]
+    fn preview_sql_copy_payload_keeps_the_generated_sql_verbatim() {
+        const SQL: &str = "CREATE TABLE `users` (\n  `id` INT\n);";
+
+        assert_eq!(
+            Some(SQL.to_string()),
+            preview_sql_to_copy(SQL).and_then(|item| item.text())
+        );
+    }
+
+    /// 预览和 DDL 页签的编辑器都是禁用态，不能像普通编辑器那样选中复制，
+    /// 所以两个页签各自要有一个显式的复制按钮。
+    #[gpui::test]
+    fn the_sql_preview_and_ddl_tabs_each_offer_a_copy_action(cx: &mut gpui::TestAppContext) {
+        const SQL: &str = "CREATE TABLE `users` (\n  `id` INT\n);";
+        let (designer, _armed_at_open, visual) = designer_window(cx, None);
+
+        for (tab, selector) in [
+            (DesignerTab::SqlPreview, SQL_PREVIEW_COPY_SELECTOR),
+            (DesignerTab::Ddl, DDL_PREVIEW_COPY_SELECTOR),
+        ] {
+            visual.update(|window, cx| {
+                designer.update(cx, |designer, cx| {
+                    designer.active_tab = tab.clone();
+                    let input = if designer.active_tab == DesignerTab::SqlPreview {
+                        designer.sql_preview_input.clone()
+                    } else {
+                        designer.ddl_preview_input.clone()
+                    };
+                    input.update(cx, |state, cx| state.set_value(SQL, window, cx));
+                    cx.notify();
+                });
+            });
+            visual.update(|window, cx| {
+                window.draw(cx).clear(cx);
+            });
+
+            assert!(
+                visual.debug_bounds(selector).is_some(),
+                "{tab:?} 页签应当渲染复制按钮"
+            );
+        }
     }
 
     /// 构造表设计器窗口，返回 (designer, 打开瞬间是否在加载态, visual)。
