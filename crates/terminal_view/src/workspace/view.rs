@@ -7,6 +7,7 @@ use terminal::terminal::TerminalConnectionKind;
 
 use super::pane_tab_transfer::TerminalPaneTabMetadata;
 use super::resize::WorkspaceSidebarResize;
+use super::split_sizing::TerminalSplitSizing;
 use super::{TerminalPaneId, TerminalSplitTree};
 use crate::view::{
     RecordingPlaybackViewConfig, SessionLogViewConfig, TERMINAL_TOOLS_SIDEBAR_DEFAULT_WIDTH,
@@ -24,6 +25,8 @@ pub struct TerminalWorkspace {
     pub(super) workspace_bounds: gpui::Bounds<gpui::Pixels>,
     pub(super) pane_tab_metadata: HashMap<TerminalPaneId, TerminalPaneTabMetadata>,
     pub(super) pane_subscriptions: HashMap<TerminalPaneId, Vec<Subscription>>,
+    /// 每个拆分分组各自持有的分隔比例,切标签页/重渲染都不丢。
+    pub(super) split_sizing: TerminalSplitSizing,
 }
 
 #[derive(Clone, Debug)]
@@ -164,6 +167,7 @@ impl TerminalWorkspace {
             workspace_bounds: gpui::Bounds::default(),
             pane_tab_metadata,
             pane_subscriptions: HashMap::new(),
+            split_sizing: TerminalSplitSizing::new(),
         };
         this.subscribe_to_pane(initial_pane_id, pane, window, cx);
         this.set_active_pane_metric_state(cx);
