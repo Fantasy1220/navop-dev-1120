@@ -140,6 +140,17 @@ impl TerminalView {
             && !terminal.is_locked()
     }
 
+    /// 粘贴路径的实时终端模式。
+    ///
+    /// 代理到 `resolve_live_term_mode`（见 helpers.rs），集中维护
+    /// 「实时读取 + 快照回退」语义，避免各粘贴入口散落 try_lock。
+    pub(super) fn live_term_mode(&self, cx: &App) -> TermMode {
+        resolve_live_term_mode(
+            self.terminal.read(cx).term(),
+            self.terminal_frame_snapshot.mode,
+        )
+    }
+
     pub(super) fn has_blocking_auth_prompt(&self, cx: &App) -> bool {
         let terminal = self.terminal.read(cx);
         terminal.ssh_credential_request().is_some()
