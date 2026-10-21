@@ -154,10 +154,18 @@ Home:
     en: "Group"
     zh-CN: "分组"
     zh-HK: "分組"
+  groups_section:
+    en: "Groups"
+    zh-CN: "分组"
+    zh-HK: "分組"
   recent_connections:
     en: "Recent Connections"
     zh-CN: "最近连接"
     zh-HK: "最近連線"
+  unassigned_connections:
+    en: "Unassigned"
+    zh-CN: "未分组"
+    zh-HK: "未分組"
   recent_hint:
     en: "Sorted by last used · not affected by group filter"
     zh-CN: "按最近使用排序 · 不受分组筛选影响"
@@ -1901,6 +1909,18 @@ Connection:
     en: Move to Group
     zh-CN: 移动到分组
     zh-HK: 移動到分組
+  move_to_this_group:
+    en: Move to This Group
+    zh-CN: 移动到此分组
+    zh-HK: 移動到此分組
+  move_target_root_group:
+    en: Root Group
+    zh-CN: 根分组
+    zh-HK: 根分組
+  move_target_hint:
+    en: "%{count} groups, expanded by hierarchy"
+    zh-CN: "共 %{count} 个分组，按层级展开"
+    zh-HK: "共 %{count} 個分組，按層級展開"
   batch_selected:
     en: "%{count} selected"
     zh-CN: "已选择 %{count} 项"
