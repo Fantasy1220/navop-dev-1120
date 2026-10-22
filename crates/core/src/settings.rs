@@ -1138,6 +1138,9 @@ pub struct AppSettings {
     pub portable_remember_master_key: bool,
     #[serde(default)]
     pub home_connection_layout: HomeConnectionLayout,
+    /// 首页是否显示「最近连接」分组
+    #[serde(default = "default_true")]
+    pub home_show_recent_connections: bool,
     /// 连接列表排序方式
     #[serde(default)]
     pub connection_sort_order: ConnectionSortOrder,
@@ -1524,6 +1527,7 @@ impl Default for AppSettings {
             require_master_key_on_startup: false,
             portable_remember_master_key: false,
             home_connection_layout: HomeConnectionLayout::default(),
+            home_show_recent_connections: true,
             connection_sort_order: ConnectionSortOrder::default(),
             connection_sidebar_expanded: true,
             connection_sidebar_tree_state: ConnectionSidebarTreeState::default(),
@@ -1891,6 +1895,27 @@ mod tests {
     #[test]
     fn app_settings_disables_sync_by_default() {
         assert!(!AppSettings::default().sync_enabled);
+    }
+
+    #[test]
+    fn home_show_recent_connections_defaults_on_and_round_trips() {
+        // 默认开启(与历史行为一致)。
+        assert!(AppSettings::default().home_show_recent_connections);
+
+        // 关闭后序列化往返保持关闭。
+        let settings = AppSettings {
+            home_show_recent_connections: false,
+            ..AppSettings::default()
+        };
+        let json = serde_json::to_string(&settings).expect("serialize app settings");
+        assert!(json.contains(r#""home_show_recent_connections":false"#));
+        let restored: AppSettings = serde_json::from_str(&json).expect("roundtrip");
+        assert!(!restored.home_show_recent_connections);
+
+        // 旧配置文件缺省该字段时,反序列化回退到默认开启(向后兼容)。
+        let legacy_settings: AppSettings =
+            serde_json::from_value(serde_json::json!({})).expect("empty deserialize");
+        assert!(legacy_settings.home_show_recent_connections);
     }
 
     #[test]

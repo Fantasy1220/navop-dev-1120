@@ -2486,6 +2486,14 @@ Settings:
         en: Connections
         zh-CN: 连接显示
         zh-HK: 連線顯示
+      show_recent:
+        en: Show Recent Connections
+        zh-CN: 显示最近连接分组
+        zh-HK: 顯示最近連線分組
+      show_recent_desc:
+        en: Show the recent connections group on Home. Turn off to keep only grouped connections.
+        zh-CN: 在首页显示「最近连接」分组，关闭后仅显示各分组内的连接
+        zh-HK: 在首頁顯示「最近連線」分組，關閉後僅顯示各分組內的連線
       home_layout:
         en: Home Connection Layout
         zh-CN: 主页连接布局
