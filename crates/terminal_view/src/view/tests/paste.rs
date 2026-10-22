@@ -119,7 +119,7 @@ fn paste_mode_test_term() -> (
 ) {
     use alacritty_terminal::sync::FairMutex;
     use alacritty_terminal::term::{Config as TermConfig, Term};
-    use alacritty_terminal::vte::ansi::{Processor, StdSyncHandler};
+    use alacritty_terminal::vte::ansi::Processor;
     use terminal::pty_backend::GpuiEventProxy;
     use tokio::sync::mpsc::unbounded_channel;
 
@@ -138,8 +138,6 @@ fn paste_mode_test_term() -> (
 
 #[test]
 fn resolve_live_term_mode_prefers_realtime_term_mode_over_stale_snapshot() {
-    use alacritty_terminal::sync::FairMutex;
-
     let (locked, mut processor) = paste_mode_test_term();
 
     // 远端开启 2004：实时读取应看到 ON，即便快照仍是过期的 OFF。
@@ -165,8 +163,6 @@ fn resolve_live_term_mode_prefers_realtime_term_mode_over_stale_snapshot() {
 
 #[test]
 fn resolve_live_term_mode_falls_back_to_snapshot_when_term_locked() {
-    use alacritty_terminal::sync::FairMutex;
-
     let (locked, _processor) = paste_mode_test_term();
     // 模拟解析线程持锁：try_lock 失败时必须回退快照而不是 panic/阻塞。
     let guard = locked.lock_unfair();
